@@ -57,11 +57,11 @@ class AsistenciaRepository {
   }
 
   async registrarAsistenciaSesion(data) {
-    const { registros } = data; // array of { fichaAprendizId, horarioId, fecha, estado, observacion }
-    const created = [];
+    const { registros = [] } = data;
+    if (registros.length === 0) return [];
 
-    for (const item of registros) {
-      const res = await prisma.asistencia.upsert({
+    const operations = registros.map((item) =>
+      prisma.asistencia.upsert({
         where: {
           fichaAprendizId_horarioId_fecha: {
             fichaAprendizId: item.fichaAprendizId,
@@ -80,11 +80,10 @@ class AsistenciaRepository {
           estado: item.estado,
           observacion: item.observacion || null,
         },
-      });
-      created.push(res);
-    }
+      })
+    );
 
-    return created;
+    return prisma.$transaction(operations);
   }
 }
 

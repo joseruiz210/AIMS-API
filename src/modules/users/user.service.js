@@ -97,8 +97,6 @@ class UserService {
   }
 
   async update(id, updateData) {
-    await this.findById(id);
-
     if (updateData.email) {
       const emailExists = await userRepository.existsByEmail(
         updateData.email,
@@ -118,7 +116,6 @@ class UserService {
   }
 
   async delete(id) {
-    await this.findById(id);
     await userRepository.delete(id);
   }
 

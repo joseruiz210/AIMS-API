@@ -78,9 +78,12 @@ class CalificacionRepository {
 
   async getAdminResumen() {
     const allCalificaciones = await prisma.calificacion.findMany({
-      include: {
+      select: {
+        nota: true,
         competencia: {
-          include: { programa: true },
+          select: {
+            programa: { select: { codigo: true, nombre: true } },
+          },
         },
       },
     });

@@ -77,15 +77,21 @@ class AsistenciaRepository {
 
   async getResumenPorFicha() {
     const fichas = await prisma.ficha.findMany({
-      include: {
-        programa: true,
+      select: {
+        id: true,
+        numero: true,
+        programa: {
+          select: { codigo: true, nombre: true },
+        },
         instructor: {
           select: { firstName: true, lastName: true },
         },
         _count: { select: { matriculas: true } },
         sesiones: {
-          include: {
-            registros: true,
+          select: {
+            registros: {
+              select: { estado: true },
+            },
           },
         },
       },
@@ -119,12 +125,16 @@ class AsistenciaRepository {
 
   async getResumenPorPrograma() {
     const programas = await prisma.programa.findMany({
-      include: {
+      select: {
+        codigo: true,
+        nombre: true,
         fichas: {
-          include: {
+          select: {
             sesiones: {
-              include: {
-                registros: true,
+              select: {
+                registros: {
+                  select: { estado: true },
+                },
               },
             },
           },

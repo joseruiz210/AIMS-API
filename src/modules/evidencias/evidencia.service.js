@@ -33,7 +33,6 @@ class EvidenciaService {
   }
 
   async update(userId, id, data) {
-    await this.getById(id);
     const updateData = { ...data };
     if (data.fechaLimite) {
       updateData.fechaLimite = new Date(data.fechaLimite);
@@ -44,7 +43,6 @@ class EvidenciaService {
   }
 
   async delete(userId, id) {
-    await this.getById(id);
     const evidencia = await evidenciaRepository.delete(id);
     await logAudit(userId, 'ELIMINAR_EVIDENCIA', { evidenciaId: id });
     return evidencia;

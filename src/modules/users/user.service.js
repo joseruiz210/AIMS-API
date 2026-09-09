@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const userRepository = require('./user.repository');
 const AppError = require('../../utils/appError');
 
-const SALT_ROUNDS = 12;
+const SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS, 10) || 10;
 
 class UserService {
   async create(userData) {

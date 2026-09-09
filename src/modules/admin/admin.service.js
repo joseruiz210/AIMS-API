@@ -4,6 +4,8 @@ const userRepository = require('../users/user.repository');
 const AppError = require('../../utils/appError');
 const logAudit = require('../../utils/auditLogger');
 
+const SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS, 10) || 10;
+
 class AdminService {
   async getDashboardStats() {
     return adminRepository.getDashboardStats();
@@ -19,7 +21,7 @@ class AdminService {
       throw AppError.conflict('El correo electrónico ya está registrado.');
     }
 
-    const hashedPassword = await bcrypt.hash(userData.password, 12);
+    const hashedPassword = await bcrypt.hash(userData.password, SALT_ROUNDS);
     const newUserData = {
       ...userData,
       password: hashedPassword,

@@ -8,7 +8,7 @@ const { generateRandomToken, hashToken } = require('../../utils/token');
 const { sendVerificationEmail, sendPasswordResetEmail, sendMagicLinkEmail } = require('../../utils/mailer');
 const { resolveRoleFromEmail } = require('../../utils/roleResolver');
 
-const SALT_ROUNDS = 12;
+const SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS, 10) || 10;
 
 class AuthService {
   async register(userData) {

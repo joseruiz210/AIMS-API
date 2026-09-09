@@ -1,4 +1,4 @@
-const bcrypt = require('bcryptjs');
+﻿const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const env = require('../../config/env');
 const userRepository = require('../users/user.repository');
@@ -8,7 +8,7 @@ const { generateRandomToken, hashToken } = require('../../utils/token');
 const { sendVerificationEmail, sendPasswordResetEmail, sendMagicLinkEmail } = require('../../utils/mailer');
 const { resolveRoleFromEmail } = require('../../utils/roleResolver');
 
-const SALT_ROUNDS = 12;
+const SALT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || '10', 10);
 
 class AuthService {
   async register(userData) {
@@ -16,7 +16,7 @@ class AuthService {
 
     const emailExists = await userRepository.existsByEmail(userData.email);
     if (emailExists) {
-      throw AppError.conflict('El email ya está registrado');
+      throw AppError.conflict('El email ya estÃ¡ registrado');
     }
 
     const hashedPassword = await bcrypt.hash(userData.password, SALT_ROUNDS);
@@ -36,7 +36,7 @@ class AuthService {
     });
 
     sendVerificationEmail(user.email, unhashedToken).catch((err) => {
-      console.error('Error al enviar correo de verificación:', err.message);
+      console.error('Error al enviar correo de verificaciÃ³n:', err.message);
     });
 
     return {
@@ -48,20 +48,20 @@ class AuthService {
   async login(email, password) {
     const user = await userRepository.findByEmail(email);
     if (!user) {
-      throw AppError.unauthorized('Credenciales inválidas');
+      throw AppError.unauthorized('Credenciales invÃ¡lidas');
     }
 
     if (!user.isActive) {
-      throw AppError.forbidden('La cuenta está desactivada. Contacta al administrador.');
+      throw AppError.forbidden('La cuenta estÃ¡ desactivada. Contacta al administrador.');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      throw AppError.unauthorized('Credenciales inválidas');
+      throw AppError.unauthorized('Credenciales invÃ¡lidas');
     }
 
     if (!user.isEmailVerified) {
-      throw AppError.forbidden('Debes verificar tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada.');
+      throw AppError.forbidden('Debes verificar tu correo electrÃ³nico antes de iniciar sesiÃ³n. Revisa tu bandeja de entrada.');
     }
 
     const accessToken = this._generateAccessToken(user);
@@ -81,22 +81,22 @@ class AuthService {
     const user = await authRepository.findUserByVerificationToken(hashed);
 
     if (!user) {
-      throw AppError.badRequest('El token de verificación es inválido o ya ha sido utilizado.');
+      throw AppError.badRequest('El token de verificaciÃ³n es invÃ¡lido o ya ha sido utilizado.');
     }
 
     await authRepository.verifyUserEmail(user.id);
 
-    return { message: 'Correo electrónico verificado exitosamente.' };
+    return { message: 'Correo electrÃ³nico verificado exitosamente.' };
   }
 
   async resendVerificationEmail(email) {
     const user = await userRepository.findByEmail(email);
     if (!user) {
-      return { message: 'Si el correo está registrado y no verificado, recibirás las instrucciones en tu bandeja de entrada.' };
+      return { message: 'Si el correo estÃ¡ registrado y no verificado, recibirÃ¡s las instrucciones en tu bandeja de entrada.' };
     }
 
     if (user.isEmailVerified) {
-      throw AppError.badRequest('Este correo electrónico ya se encuentra verificado.');
+      throw AppError.badRequest('Este correo electrÃ³nico ya se encuentra verificado.');
     }
 
     const { unhashedToken, hashedToken } = generateRandomToken();
@@ -105,13 +105,13 @@ class AuthService {
 
     await sendVerificationEmail(user.email, unhashedToken);
 
-    return { message: 'Si el correo está registrado y no verificado, recibirás las instrucciones en tu bandeja de entrada.' };
+    return { message: 'Si el correo estÃ¡ registrado y no verificado, recibirÃ¡s las instrucciones en tu bandeja de entrada.' };
   }
 
   async forgotPassword(email) {
     const user = await userRepository.findByEmail(email);
     if (!user) {
-      return { message: 'Si el correo existe en nuestra plataforma, se enviará un enlace de recuperación.' };
+      return { message: 'Si el correo existe en nuestra plataforma, se enviarÃ¡ un enlace de recuperaciÃ³n.' };
     }
 
     const { unhashedToken, hashedToken } = generateRandomToken();
@@ -120,7 +120,7 @@ class AuthService {
     await authRepository.saveResetPasswordToken(user.id, hashedToken, expiresAt);
     await sendPasswordResetEmail(user.email, unhashedToken);
 
-    return { message: 'Si el correo existe en nuestra plataforma, se enviará un enlace de recuperación.' };
+    return { message: 'Si el correo existe en nuestra plataforma, se enviarÃ¡ un enlace de recuperaciÃ³n.' };
   }
 
   async validateResetToken(unhashedToken) {
@@ -128,10 +128,10 @@ class AuthService {
     const user = await authRepository.findUserByResetToken(hashed);
 
     if (!user) {
-      throw AppError.badRequest('El token de recuperación es inválido o ha expirado.');
+      throw AppError.badRequest('El token de recuperaciÃ³n es invÃ¡lido o ha expirado.');
     }
 
-    return { message: 'El token de recuperación de contraseña es válido.' };
+    return { message: 'El token de recuperaciÃ³n de contraseÃ±a es vÃ¡lido.' };
   }
 
   async resetPassword(unhashedToken, newPassword) {
@@ -139,7 +139,7 @@ class AuthService {
     const user = await authRepository.findUserByResetToken(hashed);
 
     if (!user) {
-      throw AppError.badRequest('El token de recuperación es inválido o ha expirado.');
+      throw AppError.badRequest('El token de recuperaciÃ³n es invÃ¡lido o ha expirado.');
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
@@ -147,18 +147,18 @@ class AuthService {
     await authRepository.resetPassword(user.id, hashedPassword);
     await authRepository.revokeAllUserRefreshTokens(user.id);
 
-    return { message: 'Contraseña restablecida exitosamente. Ya puedes iniciar sesión con tu nueva contraseña.' };
+    return { message: 'ContraseÃ±a restablecida exitosamente. Ya puedes iniciar sesiÃ³n con tu nueva contraseÃ±a.' };
   }
 
   async refreshToken(refreshTokenStr) {
     const storedToken = await authRepository.findRefreshToken(refreshTokenStr);
 
     if (!storedToken || storedToken.revokedAt || new Date(storedToken.expiresAt) < new Date()) {
-      throw AppError.unauthorized('Refresh token inválido, expirado o revocado.');
+      throw AppError.unauthorized('Refresh token invÃ¡lido, expirado o revocado.');
     }
 
     if (!storedToken.user.isActive) {
-      throw AppError.forbidden('La cuenta está desactivada.');
+      throw AppError.forbidden('La cuenta estÃ¡ desactivada.');
     }
 
     const accessToken = this._generateAccessToken(storedToken.user);
@@ -181,7 +181,7 @@ class AuthService {
       await authRepository.revokeAllUserRefreshTokens(userId);
     }
 
-    return { message: 'Sesión cerrada exitosamente.' };
+    return { message: 'SesiÃ³n cerrada exitosamente.' };
   }
 
   async changePassword(userId, currentPassword, newPassword) {
@@ -192,14 +192,14 @@ class AuthService {
 
     const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
     if (!isPasswordValid) {
-      throw AppError.badRequest('La contraseña actual es incorrecta');
+      throw AppError.badRequest('La contraseÃ±a actual es incorrecta');
     }
 
     const hashedNewPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
     await userRepository.update(userId, { password: hashedNewPassword });
     await authRepository.revokeAllUserRefreshTokens(userId);
 
-    return { message: 'Contraseña actualizada exitosamente.' };
+    return { message: 'ContraseÃ±a actualizada exitosamente.' };
   }
 
   async getMe(userId) {
@@ -213,11 +213,11 @@ class AuthService {
   async sendMagicLink(email) {
     const user = await userRepository.findByEmail(email);
     if (!user) {
-      return { message: 'Si el correo está registrado, recibirás un enlace de acceso.' };
+      return { message: 'Si el correo estÃ¡ registrado, recibirÃ¡s un enlace de acceso.' };
     }
 
     if (!user.isActive) {
-      throw AppError.forbidden('La cuenta está desactivada. Contacta al administrador.');
+      throw AppError.forbidden('La cuenta estÃ¡ desactivada. Contacta al administrador.');
     }
 
     const { unhashedToken, hashedToken } = generateRandomToken();
@@ -226,7 +226,7 @@ class AuthService {
     await authRepository.saveMagicLinkToken(user.id, hashedToken, expiresAt);
     await sendMagicLinkEmail(user.email, unhashedToken);
 
-    return { message: 'Si el correo está registrado, recibirás un enlace de acceso.' };
+    return { message: 'Si el correo estÃ¡ registrado, recibirÃ¡s un enlace de acceso.' };
   }
 
   async verifyMagicLink(unhashedToken) {
@@ -234,11 +234,11 @@ class AuthService {
     const user = await authRepository.findUserByMagicLinkToken(hashed);
 
     if (!user) {
-      throw AppError.badRequest('El enlace de acceso es inválido o ha expirado.');
+      throw AppError.badRequest('El enlace de acceso es invÃ¡lido o ha expirado.');
     }
 
     if (!user.isActive) {
-      throw AppError.forbidden('La cuenta está desactivada.');
+      throw AppError.forbidden('La cuenta estÃ¡ desactivada.');
     }
 
     await authRepository.clearMagicLinkToken(user.id);
@@ -252,7 +252,7 @@ class AuthService {
       user: safeUser,
       accessToken,
       refreshToken,
-      message: 'Inicio de sesión exitoso.',
+      message: 'Inicio de sesiÃ³n exitoso.',
     };
   }
 
@@ -282,7 +282,7 @@ class AuthService {
     }
 
     if (!payload || !payload.email) {
-      throw AppError.badRequest('El token de Google no es válido o expiró');
+      throw AppError.badRequest('El token de Google no es vÃ¡lido o expirÃ³');
     }
 
     const email = payload.email.toLowerCase();
@@ -306,7 +306,7 @@ class AuthService {
       });
     } else {
       if (!user.isActive) {
-        throw AppError.forbidden('La cuenta está desactivada. Contacta al administrador.');
+        throw AppError.forbidden('La cuenta estÃ¡ desactivada. Contacta al administrador.');
       }
       if (!user.isEmailVerified || !user.googleId) {
         await userRepository.update(user.id, {

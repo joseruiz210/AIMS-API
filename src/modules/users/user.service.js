@@ -116,6 +116,7 @@ class UserService {
   }
 
   async delete(id) {
+    await this.findById(id);
     await userRepository.delete(id);
   }
 

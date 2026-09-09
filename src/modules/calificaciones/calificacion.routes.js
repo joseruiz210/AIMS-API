@@ -21,6 +21,7 @@ router.use(authenticate);
  *         description: Calificaciones obtenidas exitosamente
  */
 router.get('/mis-calificaciones', calificacionController.getMisCalificaciones);
+router.get('/ficha/:fichaId', authorize('INSTRUCTOR', 'ADMIN'), calificacionController.getCalificacionesByFicha);
 
 /**
  * @swagger

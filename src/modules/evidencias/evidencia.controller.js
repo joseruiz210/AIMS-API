@@ -41,3 +41,8 @@ exports.getEntregas = catchAsync(async (req, res) => {
   const entregas = await evidenciaService.getEntregas(req.params.id);
   ApiResponse.success(res, entregas, 'Entregas obtenidas exitosamente');
 });
+
+exports.generarPropuestaIa = catchAsync(async (req, res) => {
+  const propuesta = await evidenciaService.generarPropuestaIa(req.body);
+  ApiResponse.success(res, propuesta, 'Propuesta de actividad generada exitosamente');
+});

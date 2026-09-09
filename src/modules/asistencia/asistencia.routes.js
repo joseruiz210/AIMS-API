@@ -60,6 +60,7 @@ router.get('/mis-asistencias', asistenciaController.getMisAsistencias);
  *       201:
  *         description: Asistencias registradas exitosamente
  */
+router.get('/ficha/:fichaId', authorize('INSTRUCTOR', 'ADMIN'), asistenciaController.getAsistenciasByFicha);
 router.post('/registrar', authorize('INSTRUCTOR', 'ADMIN'), validate(asistenciaValidator.registrarAsistencia), asistenciaController.registrarAsistencia);
 
 module.exports = router;

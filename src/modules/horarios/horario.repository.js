@@ -2,18 +2,23 @@ const prisma = require('../../config/database');
 
 class HorarioRepository {
   async getHorarioByAprendiz(aprendizId) {
-    const fichaAprendiz = await prisma.fichaAprendiz.findFirst({
-      where: { aprendizId },
-      include: {
-        ficha: {
-          include: {
-            horarios: true,
+    let matricula = null;
+    try {
+      matricula = await prisma.matricula.findFirst({
+        where: { aprendizId },
+        include: {
+          ficha: {
+            include: {
+              horarios: true,
+            },
           },
         },
-      },
-    });
+      });
+    } catch (err) {
+      console.error('[HorarioRepository] Error:', err.message);
+    }
 
-    if (!fichaAprendiz || fichaAprendiz.ficha.horarios.length === 0) {
+    if (!matricula || !matricula.ficha?.horarios || matricula.ficha.horarios.length === 0) {
       return [
         {
           time: '07:00 - 09:00',
@@ -43,7 +48,7 @@ class HorarioRepository {
     }
 
     // Mapear horarios reales de la ficha a la estructura semanal
-    return fichaAprendiz.ficha.horarios;
+    return matricula.ficha.horarios;
   }
 
   async create(data) {

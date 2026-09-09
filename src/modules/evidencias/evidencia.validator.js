@@ -44,15 +44,15 @@ const calificarEntrega = Joi.object({
 });
 
 const idParam = Joi.object({
-  id: Joi.string().uuid().required().messages({
-    'string.guid': 'El ID debe ser un UUID válido',
+  id: Joi.string().trim().required().messages({
+    'string.empty': 'El ID es requerido',
     'any.required': 'El ID es requerido',
   }),
 });
 
 const entregaIdParam = Joi.object({
-  id: Joi.string().uuid().required(),
-  entregaId: Joi.string().uuid().required(),
+  id: Joi.string().trim().required(),
+  entregaId: Joi.string().trim().required(),
 });
 
 module.exports = {

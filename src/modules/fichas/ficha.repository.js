@@ -12,6 +12,7 @@ class FichaRepository {
         },
         _count: {
           select: { aprendices: true, horarios: true },
+          select: { matriculas: true, horarios: true },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -26,7 +27,7 @@ class FichaRepository {
         instructor: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
-        aprendices: {
+        matriculas: {
           include: {
             aprendiz: {
               select: { id: true, firstName: true, lastName: true, email: true, estadoAcademico: true },
@@ -75,7 +76,7 @@ class FichaRepository {
   }
 
   async addAprendiz(fichaId, aprendizId) {
-    return prisma.fichaAprendiz.create({
+    return prisma.matricula.create({
       data: {
         fichaId,
         aprendizId,
@@ -84,7 +85,7 @@ class FichaRepository {
   }
 
   async removeAprendiz(fichaId, aprendizId) {
-    return prisma.fichaAprendiz.delete({
+    return prisma.matricula.delete({
       where: {
         fichaId_aprendizId: {
           fichaId,
@@ -95,7 +96,7 @@ class FichaRepository {
   }
 
   async isAprendizInFicha(fichaId, aprendizId) {
-    const record = await prisma.fichaAprendiz.findUnique({
+    const record = await prisma.matricula.findUnique({
       where: {
         fichaId_aprendizId: {
           fichaId,

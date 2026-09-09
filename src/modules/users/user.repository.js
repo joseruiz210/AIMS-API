@@ -1,30 +1,60 @@
 const prisma = require('../../config/database');
 
+async function executeWithRetry(fn, retries = 2, delay = 500) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      const isTransient =
+        error.message?.includes('EAI_AGAIN') ||
+        error.message?.includes('ETIMEDOUT') ||
+        error.message?.includes('ECONNRESET') ||
+        error.message?.includes('connection terminated') ||
+        error.code === 'P1001';
+
+      if (attempt < retries && isTransient) {
+        console.warn(`[DB Retry] Reintentando consulta tras fallo temporal (${attempt + 1}/${retries})...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
 class UserRepository {
   async create(data) {
-    return prisma.user.create({
-      data,
-      select: this._defaultSelect(),
-    });
+    return executeWithRetry(() =>
+      prisma.user.create({
+        data,
+        select: this._defaultSelect(),
+      })
+    );
   }
 
   async findById(id) {
-    return prisma.user.findUnique({
-      where: { id },
-      select: this._defaultSelect(),
-    });
+    return executeWithRetry(() =>
+      prisma.user.findUnique({
+        where: { id },
+        select: this._defaultSelect(),
+      })
+    );
   }
 
   async findByIdWithPassword(id) {
-    return prisma.user.findUnique({
-      where: { id },
-    });
+    return executeWithRetry(() =>
+      prisma.user.findUnique({
+        where: { id },
+      })
+    );
   }
 
   async findByEmail(email) {
-    return prisma.user.findUnique({
-      where: { email },
-    });
+    return executeWithRetry(() =>
+      prisma.user.findUnique({
+        where: { email },
+      })
+    );
   }
 
   async findAll({ skip, take, where, orderBy }) {
@@ -63,12 +93,14 @@ class UserRepository {
     if (excludeId) {
       where.NOT = { id: excludeId };
     }
-    const user = await prisma.user.findFirst({ where });
-    return !!user;
+    return executeWithRetry(async () => {
+      const user = await prisma.user.findFirst({ where });
+      return !!user;
+    });
   }
 
   async count(where = {}) {
-    return prisma.user.count({ where });
+    return executeWithRetry(() => prisma.user.count({ where }));
   }
 
   _defaultSelect() {
@@ -87,17 +119,19 @@ class UserRepository {
     
   }
   async createGoogleUser({ firstName, lastName, email }) {
-  return prisma.user.create({
-    data: {
-      firstName,
-      lastName,
-      email,
-      password: null,
-      authProvider: 'GOOGLE',
-      isEmailVerified: true, // Google ya verificó el correo
-    },
-  });
-}
+    return executeWithRetry(() =>
+      prisma.user.create({
+        data: {
+          firstName,
+          lastName,
+          email,
+          password: null,
+          authProvider: 'GOOGLE',
+          isEmailVerified: true, // Google ya verificó el correo
+        },
+      })
+    );
+  }
 }
 
 

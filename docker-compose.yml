@@ -21,11 +21,19 @@ services:
       - SMTP_USER=juanes15342@gmail.com
       - SMTP_PASS=vgaodeyjpneqilyr
       - EMAIL_FROM=AIMS API <juanes15342@gmail.com>
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-AQ.Ab8RN6IHLoF13R1c75QX5BEU9ySQRcm0m5iQSlv-XizmWM9mbw}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.5-flash-lite}
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    volumes:
+      - .:/app
+      - /app/node_modules
 
   # ─── FRONTEND (Expo / React Native Web) ──────────────────────────
   frontend:
     build:
-      context: ./frontend/MiProyecto/MiProyecto
+      context: ./frontend/MiProyecto
       dockerfile: Dockerfile
     container_name: aims-frontend
     restart: always
@@ -35,5 +43,8 @@ services:
       - EXPO_PUBLIC_API_URL=http://localhost:3000/api/v1
       - EXPO_PUBLIC_GOOGLE_CLIENT_ID=801203695881-vjkbm79n28utn02fkiei3tmrieqmkd37.apps.googleusercontent.com
       - GOOGLE_CLIENT_ID=801203695881-vjkbm79n28utn02fkiei3tmrieqmkd37.apps.googleusercontent.com
+    volumes:
+      - ./frontend/MiProyecto:/app
+      - /app/node_modules
     depends_on:
       - backend

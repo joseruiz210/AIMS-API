@@ -5,6 +5,7 @@ const createObservacion = Joi.object({
     'string.empty': 'El ID del aprendiz es obligatorio',
   }),
   tipo: Joi.string().valid('Felicitacion', 'Academica', 'Disciplinaria').required().messages({
+  tipo: Joi.string().valid('Felicitacion', 'Academica', 'Disciplinaria', 'FELICITACION', 'ACADEMICA', 'DISCIPLINARIA', 'RECONOCIMIENTO', 'OTRO').required().messages({
     'string.empty': 'El tipo de observación es obligatorio',
   }),
   materia: Joi.string().trim().optional(),

@@ -23,6 +23,9 @@ class AuthService {
     const { unhashedToken, hashedToken } = generateRandomToken();
     const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
+    // En desarrollo o cuando SMTP no está configurado, activar la cuenta directamente
+    const shouldAutoVerify = !env.smtp.user || !env.smtp.pass || env.nodeEnv !== 'production';
+
     const user = await userRepository.create({
       firstName: userData.firstName,
       lastName: userData.lastName,
@@ -30,18 +33,22 @@ class AuthService {
       phone: userData.phone || null,
       password: hashedPassword,
       role: resolvedRole,
-      isEmailVerified: false,
-      emailVerificationToken: hashedToken,
-      emailVerificationExpires,
+      isEmailVerified: shouldAutoVerify ? true : false,
+      emailVerificationToken: shouldAutoVerify ? null : hashedToken,
+      emailVerificationExpires: shouldAutoVerify ? null : emailVerificationExpires,
     });
 
-    sendVerificationEmail(user.email, unhashedToken).catch((err) => {
-      console.error('Error al enviar correo de verificación:', err.message);
-    });
+    if (!shouldAutoVerify) {
+      sendVerificationEmail(user.email, unhashedToken).catch((err) => {
+        console.error('Error al enviar correo de verificación:', err.message);
+      });
+    }
 
     return {
       user,
-      message: 'Usuario registrado exitosamente. Se ha enviado un correo para verificar tu cuenta.',
+      message: shouldAutoVerify
+        ? 'Usuario registrado y activado exitosamente.'
+        : 'Usuario registrado exitosamente. Se ha enviado un correo para verificar tu cuenta.',
     };
   }
 
@@ -61,7 +68,12 @@ class AuthService {
     }
 
     if (!user.isEmailVerified) {
-      throw AppError.forbidden('Debes verificar tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada.');
+      if (!env.smtp.user || !env.smtp.pass || env.nodeEnv !== 'production') {
+        await userRepository.update(user.id, { isEmailVerified: true });
+        user.isEmailVerified = true;
+      } else {
+        throw AppError.forbidden('Debes verificar tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada.');
+      }
     }
 
     const accessToken = this._generateAccessToken(user);

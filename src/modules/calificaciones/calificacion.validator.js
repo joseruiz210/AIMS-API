@@ -13,6 +13,9 @@ const registrarCalificacion = Joi.object({
     'string.guid': 'El moduloId debe ser un UUID válido',
     'any.required': 'El moduloId es requerido',
   }),
+  fichaId: Joi.string().uuid().optional(),
+  competenciaId: Joi.string().uuid().optional(),
+  moduloId: Joi.string().uuid().optional(),
   nota: Joi.number().min(0.0).max(5.0).required().messages({
     'number.min': 'La nota mínima es 0.0',
     'number.max': 'La nota máxima es 5.0',

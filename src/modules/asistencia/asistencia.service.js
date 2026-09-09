@@ -19,6 +19,10 @@ class AsistenciaService {
     return data;
   }
 
+  async getAsistenciasByFicha(fichaId, fecha) {
+    return asistenciaRepository.getAsistenciasByFicha(fichaId, fecha);
+  }
+
   async registrarAsistenciaSesion(userId, data) {
     const result = await asistenciaRepository.registrarAsistenciaSesion(data);
     await logAudit(userId, 'REGISTRAR_ASISTENCIA', { cantidad: result.length });

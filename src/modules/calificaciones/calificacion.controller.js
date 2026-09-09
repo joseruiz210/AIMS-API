@@ -7,6 +7,12 @@ exports.getMisCalificaciones = catchAsync(async (req, res) => {
   ApiResponse.success(res, data, 'Calificaciones obtenidas exitosamente');
 });
 
+exports.getCalificacionesByFicha = catchAsync(async (req, res) => {
+  const { fichaId } = req.params;
+  const data = await calificacionService.getCalificacionesByFicha(fichaId);
+  ApiResponse.success(res, data, 'Calificaciones de la ficha obtenidas exitosamente');
+});
+
 exports.registrarCalificacion = catchAsync(async (req, res) => {
   const resultado = await calificacionService.registrarCalificacion(req.user.id, req.body);
   ApiResponse.created(res, resultado, 'Calificación registrada exitosamente');

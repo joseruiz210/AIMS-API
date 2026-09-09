@@ -81,6 +81,17 @@ router.post('/', authorize('INSTRUCTOR', 'ADMIN'), validate(evidenciaValidator.c
 
 /**
  * @swagger
+ * /evidencias/generar-propuesta-ia:
+ *   post:
+ *     summary: Generar propuesta y redacción de actividad formativa
+ *     tags: [Evidencias]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post('/generar-propuesta-ia', authorize('INSTRUCTOR', 'ADMIN'), evidenciaController.generarPropuestaIa);
+
+/**
+ * @swagger
  * /evidencias/{id}:
  *   put:
  *     summary: Actualizar una evidencia existente

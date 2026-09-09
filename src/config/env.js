@@ -19,6 +19,10 @@ const env = {
     from: process.env.EMAIL_FROM || 'AIMS API <noreply@aims-api.com>',
     
   },
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || '',
+    model: process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
+  },
 };
 
 const requiredVars = ['jwtSecret', 'databaseUrl'];

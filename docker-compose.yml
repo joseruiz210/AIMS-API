@@ -1,4 +1,23 @@
 services:
+  # ─── LOCAL DATABASE (PostgreSQL para desarrollo de ultra-baja latencia) ────
+  postgres:
+    image: postgres:16-alpine
+    container_name: aims-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: aims_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - aims_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d aims_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   # ─── BACKEND API (Node.js / Express / Prisma) ───────────────────
   backend:
     build:
@@ -12,7 +31,7 @@ services:
       - PORT=3000
       - NODE_ENV=development
       - FRONTEND_URL=http://localhost:8081
-      - DATABASE_URL=postgresql://neondb_owner:npg_h7dN8kQOgqxT@ep-floral-heart-acnwfivw-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgrespassword@postgres:5432/aims_db?schema=public}
       - JWT_SECRET=your_jwt_secret_key_change_in_production
       - JWT_EXPIRES_IN=24h
       - GOOGLE_CLIENT_ID=801203695881-vjkbm79n28utn02fkiei3tmrieqmkd37.apps.googleusercontent.com
@@ -21,6 +40,9 @@ services:
       - SMTP_USER=juanes15342@gmail.com
       - SMTP_PASS=vgaodeyjpneqilyr
       - EMAIL_FROM=AIMS API <juanes15342@gmail.com>
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   # ─── FRONTEND (Expo / React Native Web) ──────────────────────────
   frontend:
@@ -37,3 +59,6 @@ services:
       - GOOGLE_CLIENT_ID=801203695881-vjkbm79n28utn02fkiei3tmrieqmkd37.apps.googleusercontent.com
     depends_on:
       - backend
+
+volumes:
+  aims_pgdata:

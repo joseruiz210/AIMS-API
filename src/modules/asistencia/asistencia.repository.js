@@ -104,82 +104,45 @@ class AsistenciaRepository {
   }
 
   async registrarAsistenciaSesion(data) {
-    const { registros } = data; // array of { fichaAprendizId, horarioId, fecha, estado, observacion }
-    const created = [];
+    const lista = data.asistencias || data.registros || [];
     const fichaId = data.fichaId;
     const fecha = data.fecha ? new Date(data.fecha) : new Date();
     const tema = data.tema || 'Sesión Formativa';
 
-    for (const item of registros) {
-      const res = await prisma.asistencia.upsert({
-    const lista = data.asistencias || data.registros || [];
+    if (!fichaId) return [];
 
-    let sesion = null;
-    if (fichaId) {
-      const startOfDay = new Date(new Date(fecha).setHours(0, 0, 0, 0));
-      const endOfDay = new Date(new Date(fecha).setHours(23, 59, 59, 999));
+    const sesion = await prisma.sesionAsistencia.create({
+      data: {
+        fichaId,
+        fecha,
+        tema,
+      },
+    });
 
-      sesion = await prisma.sesionAsistencia.findFirst({
+    const created = [];
+    for (const item of lista) {
+      const aprendizId = item.aprendizId;
+      if (!aprendizId) continue;
+
+      const registro = await prisma.registroAsistencia.upsert({
         where: {
-          fichaAprendizId_horarioId_fecha: {
-            fichaAprendizId: item.fichaAprendizId,
-            horarioId: item.horarioId,
-            fecha: new Date(item.fecha),
+          sesionId_aprendizId: {
+            sesionId: sesion.id,
+            aprendizId,
           },
-          fichaId,
-          fecha: { gte: startOfDay, lte: endOfDay },
         },
         update: {
           estado: item.estado,
           observacion: item.observacion || null,
         },
         create: {
-          fichaAprendizId: item.fichaAprendizId,
-          horarioId: item.horarioId,
-          fecha: new Date(item.fecha),
+          sesionId: sesion.id,
+          aprendizId,
           estado: item.estado,
           observacion: item.observacion || null,
         },
       });
-      created.push(res);
-
-      if (!sesion) {
-        sesion = await prisma.sesionAsistencia.create({
-          data: {
-            fichaId,
-            fecha,
-            tema,
-          },
-        });
-      }
-    }
-
-    const created = [];
-    for (const item of lista) {
-      const aprendizId = item.aprendizId || item.fichaAprendizId;
-      if (!aprendizId) continue;
-
-      if (sesion) {
-        const reg = await prisma.registroAsistencia.upsert({
-          where: {
-            sesionId_aprendizId: {
-              sesionId: sesion.id,
-              aprendizId,
-            },
-          },
-          update: {
-            estado: item.estado,
-            observacion: item.observacion || null,
-          },
-          create: {
-            sesionId: sesion.id,
-            aprendizId,
-            estado: item.estado,
-            observacion: item.observacion || null,
-          },
-        });
-        created.push(reg);
-      }
+      created.push(registro);
     }
 
     return created;

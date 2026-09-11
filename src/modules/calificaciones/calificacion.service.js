@@ -11,7 +11,6 @@ class CalificacionService {
   }
 
   async registrarCalificacion(userId, data) {
-    const result = await calificacionRepository.upsertCalificacion(data);
     const payload = {
       ...data,
       competenciaId: data.competenciaId || data.moduloId,

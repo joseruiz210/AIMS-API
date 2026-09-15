@@ -103,6 +103,14 @@ class UserRepository {
     return executeWithRetry(() => prisma.user.count({ where }));
   }
 
+  async updatePushToken(id, pushToken) {
+    return prisma.user.update({
+      where: { id },
+      data: { pushToken },
+      select: this._defaultSelect(),
+    });
+  }
+
   _defaultSelect() {
     return {
       id: true,
@@ -112,11 +120,11 @@ class UserRepository {
       role: true,
       phone: true,
       isActive: true,
+      pushToken: true,
       createdAt: true,
       updatedAt: true,
       password: false,
     };
-    
   }
   async createGoogleUser({ firstName, lastName, email }) {
     return executeWithRetry(() =>

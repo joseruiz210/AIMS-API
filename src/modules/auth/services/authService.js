@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const env = require('../../../config/env');
+const prisma = require('../../../config/database');
 const userRepository = require('../../usuarios/repositories/userRepository');
 const authRepository = require('../repositories/authRepository');
 const AppError = require('../../../utils/appError');
@@ -16,7 +17,22 @@ class AuthService {
 
     const emailExists = await userRepository.existsByEmail(userData.email);
     if (emailExists) {
-      throw AppError.conflict('El email ya estÃ¡ registrado');
+      throw AppError.conflict('El email ya está registrado');
+    }
+
+    // Si es APRENDIZ y proporcionó datos de ficha, verificar que exista previamente
+    let ficha = null;
+    if (resolvedRole === 'APRENDIZ' && (userData.fichaId || userData.fichaNumero)) {
+      ficha = await prisma.ficha.findFirst({
+        where: userData.fichaId
+          ? { id: userData.fichaId }
+          : { numero: String(userData.fichaNumero).trim() },
+        include: { programa: true },
+      });
+
+      if (!ficha) {
+        throw AppError.notFound(`La ficha ${userData.fichaId || userData.fichaNumero} no existe en el sistema`);
+      }
     }
 
     const hashedPassword = await bcrypt.hash(userData.password, SALT_ROUNDS);
@@ -26,26 +42,56 @@ class AuthService {
     // En desarrollo o cuando SMTP no está configurado, activar la cuenta directamente
     const shouldAutoVerify = !env.smtp.user || !env.smtp.pass || env.nodeEnv !== 'production';
 
-    const user = await userRepository.create({
-      firstName: userData.firstName,
-      lastName: userData.lastName,
-      email: userData.email,
-      phone: userData.phone || null,
-      password: hashedPassword,
-      role: resolvedRole,
-      isEmailVerified: shouldAutoVerify ? true : false,
-      emailVerificationToken: shouldAutoVerify ? null : hashedToken,
-      emailVerificationExpires: shouldAutoVerify ? null : emailVerificationExpires,
+    // Transacción ACID para asegurar la creación del usuario y su matrícula académica
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          email: userData.email,
+          phone: userData.phone || null,
+          password: hashedPassword,
+          role: resolvedRole,
+          isEmailVerified: shouldAutoVerify ? true : false,
+          emailVerificationToken: shouldAutoVerify ? null : hashedToken,
+          emailVerificationExpires: shouldAutoVerify ? null : emailVerificationExpires,
+        },
+      });
+
+      let matricula = null;
+      if (ficha) {
+        matricula = await tx.matricula.create({
+          data: {
+            fichaId: ficha.id,
+            aprendizId: user.id,
+            sede: userData.sede || ficha.sede || null,
+            trimestre: userData.trimestre ? parseInt(userData.trimestre, 10) : (ficha.trimestreActual || 1),
+            estado: 'Activo',
+          },
+          include: {
+            ficha: {
+              include: { programa: true },
+            },
+          },
+        });
+      }
+
+      return { user, matricula };
     });
 
     if (!shouldAutoVerify) {
-      sendVerificationEmail(user.email, unhashedToken).catch((err) => {
+      sendVerificationEmail(result.user.email, unhashedToken).catch((err) => {
         console.error('Error al enviar correo de verificación:', err.message);
       });
     }
 
+    const { password: _, emailVerificationToken: __, ...safeUser } = result.user;
+    if (result.matricula) {
+      safeUser.matricula = result.matricula;
+    }
+
     return {
-      user,
+      user: safeUser,
       message: shouldAutoVerify
         ? 'Usuario registrado y activado exitosamente.'
         : 'Usuario registrado exitosamente. Se ha enviado un correo para verificar tu cuenta.',

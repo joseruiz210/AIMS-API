@@ -65,6 +65,7 @@ model User {
   emailVerificationExpires DateTime?       @map("email_verification_expires")
   resetPasswordToken       String?         @map("reset_password_token")
   resetPasswordExpires     DateTime?       @map("reset_password_expires")
+  pushToken                String?         @map("push_token")
   createdAt                DateTime        @default(now()) @map("created_at")
   updatedAt                DateTime        @updatedAt @map("updated_at")
 
@@ -132,22 +133,24 @@ model Modulo {
 }
 
 model Ficha {
-  id           String             @id @default(uuid())
-  numero       String             @unique
-  badgeCode    String?            @map("badge_code")
-  jornada      String?            @default("Mañana")
-  estado       String             @default("Activo")
-  programaId   String             @map("programa_id")
-  instructorId String?            @map("instructor_id")
-  createdAt    DateTime           @default(now()) @map("created_at")
-  updatedAt    DateTime           @updatedAt @map("updated_at")
+  id              String             @id @default(uuid())
+  numero          String             @unique
+  badgeCode       String?            @map("badge_code")
+  jornada         String?            @default("Mañana")
+  estado          String             @default("Activo")
+  sede            String?
+  trimestreActual Int?               @map("trimestre_actual")
+  programaId      String             @map("programa_id")
+  instructorId    String?            @map("instructor_id")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
 
-  programa     Programa           @relation(fields: [programaId], references: [id])
-  instructor   User?              @relation("InstructorFichas", fields: [instructorId], references: [id])
-  matriculas   Matricula[]
-  sesiones     SesionAsistencia[]
-  horarios     Horario[]
-  evidencias   Evidencia[]
+  programa        Programa           @relation(fields: [programaId], references: [id])
+  instructor      User?              @relation("InstructorFichas", fields: [instructorId], references: [id])
+  matriculas      Matricula[]
+  sesiones        SesionAsistencia[]
+  horarios        Horario[]
+  evidencias      Evidencia[]
 
   @@map("fichas")
 }
@@ -156,6 +159,8 @@ model Matricula {
   id             String   @id @default(uuid())
   fichaId        String   @map("ficha_id")
   aprendizId     String   @map("aprendiz_id")
+  trimestre      Int?     @default(1)
+  sede           String?
   fechaMatricula DateTime @default(now()) @map("fecha_matricula")
   estado         String   @default("Activo")
   createdAt      DateTime @default(now()) @map("created_at")

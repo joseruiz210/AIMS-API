@@ -11,6 +11,8 @@ const createMatricula = Joi.object({
   }),
   fechaMatricula: Joi.date().iso().optional(),
   estado: Joi.string().valid('Activo', 'Pendiente', 'Retirado').optional(),
+  sede: Joi.string().trim().max(100).allow(null, '').optional(),
+  trimestre: Joi.number().integer().min(1).max(12).allow(null).optional(),
 });
 
 const updateMatricula = Joi.object({
@@ -18,6 +20,8 @@ const updateMatricula = Joi.object({
   aprendizId: Joi.string().uuid().optional(),
   fechaMatricula: Joi.date().iso().optional(),
   estado: Joi.string().valid('Activo', 'Pendiente', 'Retirado').optional(),
+  sede: Joi.string().trim().max(100).allow(null, '').optional(),
+  trimestre: Joi.number().integer().min(1).max(12).allow(null).optional(),
 }).min(1);
 
 const idParam = Joi.object({

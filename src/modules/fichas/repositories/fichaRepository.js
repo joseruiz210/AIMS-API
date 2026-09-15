@@ -11,7 +11,6 @@ class FichaRepository {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
         _count: {
-          select: { aprendices: true, horarios: true },
           select: { matriculas: true, horarios: true },
         },
       },
@@ -48,6 +47,8 @@ class FichaRepository {
         fechaFin: data.fechaFin ? new Date(data.fechaFin) : null,
         programaId: data.programaId,
         instructorId: data.instructorId || null,
+        sede: data.sede || null,
+        trimestreActual: data.trimestreActual !== undefined ? Number(data.trimestreActual) : null,
       },
     });
   }

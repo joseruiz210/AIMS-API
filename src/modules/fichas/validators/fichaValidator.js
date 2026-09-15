@@ -26,6 +26,8 @@ const createFicha = Joi.object({
   instructorId: Joi.string().uuid().allow(null, '').optional().messages({
     'string.guid': 'El instructorId debe ser un UUID válido',
   }),
+  sede: Joi.string().trim().max(100).allow(null, '').optional(),
+  trimestreActual: Joi.number().integer().min(1).max(12).allow(null).optional(),
   isActive: Joi.boolean().optional(),
 });
 
@@ -36,6 +38,8 @@ const updateFicha = Joi.object({
   fechaFin: Joi.date().iso().allow(null, ''),
   programaId: Joi.string().uuid(),
   instructorId: Joi.string().uuid().allow(null, ''),
+  sede: Joi.string().trim().max(100).allow(null, ''),
+  trimestreActual: Joi.number().integer().min(1).max(12).allow(null),
   isActive: Joi.boolean(),
 })
   .min(1)

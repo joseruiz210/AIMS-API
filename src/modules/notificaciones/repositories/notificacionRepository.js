@@ -11,14 +11,14 @@ class NotificacionRepository {
   async markAsRead(id, userId) {
     return prisma.notificacion.updateMany({
       where: { id, userId },
-      data: { leido: true },
+      data: { leida: true },
     });
   }
 
   async markAllAsRead(userId) {
     return prisma.notificacion.updateMany({
-      where: { userId, leido: false },
-      data: { leido: true },
+      where: { userId, leida: false },
+      data: { leida: true },
     });
   }
 

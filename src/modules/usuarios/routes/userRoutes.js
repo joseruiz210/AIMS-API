@@ -61,6 +61,30 @@ router.put(
   userController.updateProfile
 );
 
+/**
+ * @swagger
+ * /users/push-token:
+ *   post:
+ *     tags: [Users]
+ *     summary: Actualizar Expo Push Token para notificaciones móviles
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               pushToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Token actualizado exitosamente
+ */
+router.post('/push-token', authenticate, userController.updatePushToken);
+router.put('/push-token', authenticate, userController.updatePushToken);
+
 // ─── Admin Routes ────────────────────────────────────────────────
 
 /**

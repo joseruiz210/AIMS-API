@@ -49,6 +49,12 @@ class UserController {
     const status = user.isActive ? 'activado' : 'desactivado';
     return success(res, user, `Usuario ${status} exitosamente`);
   });
+
+  updatePushToken = catchAsync(async (req, res) => {
+    const { pushToken } = req.body;
+    const user = await userService.updatePushToken(req.user.id, pushToken || null);
+    return success(res, { pushToken: user.pushToken }, 'Token de notificación actualizado exitosamente');
+  });
 }
 
 module.exports = new UserController();

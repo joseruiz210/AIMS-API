@@ -3,8 +3,8 @@ const jwt = require('jsonwebtoken');
 const app = require('../../src/app');
 const env = require('../../src/config/env');
 
-jest.mock('../../src/modules/horarios/horario.repository');
-const horarioRepository = require('../../src/modules/horarios/horario.repository');
+jest.mock('../../src/modules/horarios/repositories/horarioRepository');
+const horarioRepository = require('../../src/modules/horarios/repositories/horarioRepository');
 
 describe('Horarios Integration Tests', () => {
   const instructorToken = jwt.sign({ id: 'inst-id', role: 'INSTRUCTOR' }, env.jwtSecret, { expiresIn: '1h' });

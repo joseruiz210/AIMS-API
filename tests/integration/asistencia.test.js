@@ -3,8 +3,8 @@ const jwt = require('jsonwebtoken');
 const app = require('../../src/app');
 const env = require('../../src/config/env');
 
-jest.mock('../../src/modules/asistencia/asistencia.repository');
-const asistenciaRepository = require('../../src/modules/asistencia/asistencia.repository');
+jest.mock('../../src/modules/asistencia/repositories/asistenciaRepository');
+const asistenciaRepository = require('../../src/modules/asistencia/repositories/asistenciaRepository');
 
 describe('Asistencia Integration Tests', () => {
   const instructorToken = jwt.sign({ id: 'inst-id', role: 'INSTRUCTOR' }, env.jwtSecret, { expiresIn: '1h' });

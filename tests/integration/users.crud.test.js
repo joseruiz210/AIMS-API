@@ -4,9 +4,9 @@ const app = require('../../src/app');
 const env = require('../../src/config/env');
 
 // Mock user repository to isolate integration tests from database dependencies
-jest.mock('../../src/modules/users/user.repository');
+jest.mock('../../src/modules/usuarios/repositories/userRepository');
 
-const userRepository = require('../../src/modules/users/user.repository');
+const userRepository = require('../../src/modules/usuarios/repositories/userRepository');
 
 describe('Users CRUD & Authorization Integration Tests', () => {
   const adminUser = {

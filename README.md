@@ -297,62 +297,11 @@ AIMS-API/
 │   │   ├── database.js
 │   │   ├── env.js
 │   │   └── swagger.js
-│   ├── controllers/            # Controladores Express (10 módulos)
-│   │   ├── admin.controller.js
-│   │   ├── aprendiz.controller.js
-│   │   ├── asistencia.controller.js
-│   │   ├── auth.controller.js
-│   │   ├── calificacion.controller.js
-│   │   ├── evidencia.controller.js
-│   │   ├── ficha.controller.js
-│   │   ├── horario.controller.js
-│   │   ├── modulo.controller.js
-│   │   ├── notificacion.controller.js
-│   │   ├── programa.controller.js
-│   │   └── user.controller.js
 │   ├── middlewares/            # Middlewares de Auth, Errores, Rate Limit y Validación
 │   │   ├── auth.js
 │   │   ├── errorHandler.js
 │   │   ├── rateLimiter.js
 │   │   └── validate.js
-│   ├── repositories/           # Capa de acceso a datos con Prisma Client
-│   │   ├── admin.repository.js
-│   │   ├── asistencia.repository.js
-│   │   ├── auth.repository.js
-│   │   ├── calificacion.repository.js
-│   │   ├── evidencia.repository.js
-│   │   ├── ficha.repository.js
-│   │   ├── horario.repository.js
-│   │   ├── modulo.repository.js
-│   │   ├── notificacion.repository.js
-│   │   ├── programa.repository.js
-│   │   └── user.repository.js
-│   ├── routes/                 # Rutas Express documentadas con Swagger
-│   │   ├── index.js
-│   │   ├── admin.routes.js
-│   │   ├── aprendiz.routes.js
-│   │   ├── asistencia.routes.js
-│   │   ├── auth.routes.js
-│   │   ├── calificacion.routes.js
-│   │   ├── evidencia.routes.js
-│   │   ├── ficha.routes.js
-│   │   ├── horario.routes.js
-│   │   ├── modulo.routes.js
-│   │   ├── notificacion.routes.js
-│   │   ├── programa.routes.js
-│   │   └── user.routes.js
-│   ├── services/               # Lógica de negocio y casos de uso
-│   │   ├── admin.service.js
-│   │   ├── asistencia.service.js
-│   │   ├── auth.service.js
-│   │   ├── calificacion.service.js
-│   │   ├── evidencia.service.js
-│   │   ├── ficha.service.js
-│   │   ├── horario.service.js
-│   │   ├── modulo.service.js
-│   │   ├── notificacion.service.js
-│   │   ├── programa.service.js
-│   │   └── user.service.js
 │   ├── utils/                  # Loggers, mailer, JWT, roleResolver y respuestas
 │   │   ├── appError.js
 │   │   ├── auditLogger.js
@@ -361,16 +310,31 @@ AIMS-API/
 │   │   ├── response.js
 │   │   ├── roleResolver.js
 │   │   └── token.js
-│   └── validators/             # Esquemas de validación de Joi
-│       ├── asistencia.validator.js
-│       ├── auth.validator.js
-│       ├── calificacion.validator.js
-│       ├── evidencia.validator.js
-│       ├── ficha.validator.js
-│       ├── horario.validator.js
-│       ├── modulo.validator.js
-│       ├── programa.validator.js
-│       └── user.validator.js
+│   ├── routes/index.js         # Ensamblador de las rutas modulares
+│   └── modules/                # Cada dominio contiene su propia arquitectura
+│       ├── asistencia/
+│       │   ├── controllers/asistenciaController.js
+│       │   ├── services/asistenciaService.js
+│       │   ├── repositories/asistenciaRepository.js
+│       │   ├── routes/asistenciaRoutes.js
+│       │   └── validators/asistenciaValidator.js
+│       ├── auth/
+│       ├── usuarios/
+│       ├── dashboard/
+│       ├── programas/
+│       ├── fichas/
+│       ├── horarios/
+│       ├── calificaciones/
+│       ├── modulos/
+│       ├── evidencias/
+│       ├── notificaciones/
+│       ├── comunicado/
+│       ├── configuracion/
+│       ├── documentos/
+│       ├── matricula/
+│       ├── mensaje/
+│       ├── observacion/
+│       └── reportes/
 └── tests/
     ├── integration/            # Pruebas de integración
     │   ├── admin.test.js

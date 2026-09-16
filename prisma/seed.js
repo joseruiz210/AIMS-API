@@ -113,8 +113,9 @@ async function main() {
   // 6. Comunicado inicial
   await prisma.comunicado.create({
     data: {
-      adminId: admin.id,
-      destinatario: 'Todos los aprendices',
+      autorId: admin.id,
+      fichaId: null,
+      destinatario: 'Todos los usuarios',
       titulo: 'Bienvenida al Trimestre Académico AIMS SENA',
       mensaje: 'Les damos la bienvenida al nuevo ciclo lectivo. Recuerden mantener su asistencia y revisar sus calificaciones oportunamente.',
     },

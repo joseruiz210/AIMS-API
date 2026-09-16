@@ -1,0 +1,401 @@
+diff --git a/prisma/migrations/20260916060000_comunicado_ficha_scope/migration.sql b/prisma/migrations/20260916060000_comunicado_ficha_scope/migration.sql
+new file mode 100644
+index 0000000..6e9fb48
+--- /dev/null
++++ b/prisma/migrations/20260916060000_comunicado_ficha_scope/migration.sql
+@@ -0,0 +1,25 @@
++-- Comunicados: permitir que un INSTRUCTOR publique avisos con alcance a
++-- su propia ficha (por ejemplo "hoy no hay clase"), no solo el ADMIN
++-- avisos globales.
++--
++-- 1) admin_id -> autor_id (ahora puede ser un admin o un instructor)
++-- 2) se agrega ficha_id (nulo = aviso global, con valor = aviso de esa ficha)
++
++-- DropForeignKey (constraint original sobre admin_id)
++ALTER TABLE "comunicados" DROP CONSTRAINT IF EXISTS "comunicados_admin_id_fkey";
++
++-- RenameColumn
++ALTER TABLE "comunicados" RENAME COLUMN "admin_id" TO "autor_id";
++
++-- AddColumn
++ALTER TABLE "comunicados" ADD COLUMN "ficha_id" TEXT;
++
++-- RenameIndex (el índice del init se llamaba distinto según cómo se haya nombrado;
++-- si no existe con ese nombre, este DROP no falla porque usamos IF EXISTS)
++DROP INDEX IF EXISTS "comunicados_admin_id_idx";
++CREATE INDEX "comunicados_autor_id_idx" ON "comunicados"("autor_id");
++CREATE INDEX "comunicados_ficha_id_idx" ON "comunicados"("ficha_id");
++
++-- AddForeignKey
++ALTER TABLE "comunicados" ADD CONSTRAINT "comunicados_autor_id_fkey" FOREIGN KEY ("autor_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
++ALTER TABLE "comunicados" ADD CONSTRAINT "comunicados_ficha_id_fkey" FOREIGN KEY ("ficha_id") REFERENCES "fichas"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+diff --git a/prisma/schema.prisma b/prisma/schema.prisma
+index d057fe9..839a714 100644
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -77,7 +77,7 @@ model User {
+   calificacionesInstructor Calificacion[]         @relation("CalificacionesInstructor")
+   observacionesAprendiz    Observacion[]          @relation("ObservacionesAprendiz")
+   observacionesInstructor Observacion[]          @relation("ObservacionesInstructor")
+-  comunicados              Comunicado[]           @relation("ComunicadosAdmin")
++  comunicados              Comunicado[]           @relation("ComunicadosAutor")
+   lecturas                 LecturaComunicado[]    @relation("LecturasComunicado")
+   notificaciones           Notificacion[]         @relation("NotificacionesUser")
+   mensajesEnviados         Mensaje[]              @relation("MensajesSent")
+@@ -151,6 +151,7 @@ model Ficha {
+   sesiones        SesionAsistencia[]
+   horarios        Horario[]
+   evidencias      Evidencia[]
++  comunicados     Comunicado[]
+ 
+   @@map("fichas")
+ }
+@@ -261,16 +262,21 @@ model Observacion {
+ 
+ model Comunicado {
+   id           String              @id @default(uuid())
+-  adminId      String              @map("admin_id")
++  autorId      String              @map("autor_id")
++  fichaId      String?             @map("ficha_id")
+   titulo       String
+   mensaje      String
+   destinatario String
+   createdAt    DateTime            @default(now()) @map("created_at")
+ 
+-  admin        User                @relation("ComunicadosAdmin", fields: [adminId], references: [id])
++  // fichaId nulo = aviso global (solo lo puede crear ADMIN).
++  // fichaId presente = aviso de un INSTRUCTOR, visible solo para su ficha.
++  autor        User                @relation("ComunicadosAutor", fields: [autorId], references: [id])
++  ficha        Ficha?              @relation(fields: [fichaId], references: [id], onDelete: Cascade)
+   lecturas     LecturaComunicado[]
+ 
+-  @@index([adminId])
++  @@index([autorId])
++  @@index([fichaId])
+   @@map("comunicados")
+ }
+ 
+diff --git a/prisma/seed.js b/prisma/seed.js
+index 9fa6351..6e81a25 100644
+--- a/prisma/seed.js
++++ b/prisma/seed.js
+@@ -113,8 +113,9 @@ async function main() {
+   // 6. Comunicado inicial
+   await prisma.comunicado.create({
+     data: {
+-      adminId: admin.id,
+-      destinatario: 'Todos los aprendices',
++      autorId: admin.id,
++      fichaId: null,
++      destinatario: 'Todos los usuarios',
+       titulo: 'Bienvenida al Trimestre Académico AIMS SENA',
+       mensaje: 'Les damos la bienvenida al nuevo ciclo lectivo. Recuerden mantener su asistencia y revisar sus calificaciones oportunamente.',
+     },
+diff --git a/src/index.js b/src/index.js
+index e5bd6ba..444fbf7 100644
+--- a/src/index.js
++++ b/src/index.js
+@@ -1,7 +1,6 @@
+ const { Router } = require('express');
+ const authRoutes = require('./modules/auth/routes/authRoutes');
+ const userRoutes = require('./modules/usuarios/routes/userRoutes');
+-const adminUserRoutes = require('./modules/usuarios/routes/adminUserRoutes');
+ const programaRoutes = require('./modules/programas/routes/programaRoutes');
+ const fichaRoutes = require('./modules/fichas/routes/fichaRoutes');
+ const matriculaRoutes = require('./modules/matricula/routes/matriculaRoutes');
+@@ -25,7 +24,6 @@ const router = Router();
+ router.use('/auth', authRoutes);
+ router.use('/users', userRoutes);
+ router.use('/admin', panelRoutes);
+-router.use('/admin', adminUserRoutes);
+ router.use('/programas', programaRoutes);
+ router.use('/fichas', fichaRoutes);
+ router.use('/matriculas', matriculaRoutes);
+diff --git a/src/modules/comunicado/controllers/comunicadoController.js b/src/modules/comunicado/controllers/comunicadoController.js
+index 103330b..1986007 100644
+--- a/src/modules/comunicado/controllers/comunicadoController.js
++++ b/src/modules/comunicado/controllers/comunicadoController.js
+@@ -4,12 +4,12 @@ const catchAsync = require('../../../utils/catchAsync');
+ 
+ class ComunicadoController {
+   create = catchAsync(async (req, res) => {
+-    const comunicado = await comunicadoService.create(req.user.id, req.body);
++    const comunicado = await comunicadoService.create(req.user, req.body);
+     return created(res, comunicado, 'Comunicado enviado exitosamente');
+   });
+ 
+   getAll = catchAsync(async (req, res) => {
+-    const comunicados = await comunicadoService.findAll();
++    const comunicados = await comunicadoService.findAllForUser(req.user);
+     return success(res, comunicados, 'Comunicados obtenidos exitosamente');
+   });
+ 
+diff --git a/src/modules/comunicado/repositories/comunicadoRepository.js b/src/modules/comunicado/repositories/comunicadoRepository.js
+index 3085846..8b1086b 100644
+--- a/src/modules/comunicado/repositories/comunicadoRepository.js
++++ b/src/modules/comunicado/repositories/comunicadoRepository.js
+@@ -5,17 +5,50 @@ class ComunicadoRepository {
+     return prisma.comunicado.create({
+       data,
+       include: {
+-        admin: { select: { firstName: true, lastName: true } },
++        autor: { select: { firstName: true, lastName: true, role: true } },
++        ficha: { select: { id: true, numero: true } },
+         _count: { select: { lecturas: true } },
+       },
+     });
+   }
+ 
+-  async findAll() {
++  // Verifica que la ficha exista y que ese instructor sea quien la dicta,
++  // para que un instructor no pueda mandar avisos a fichas ajenas.
++  async fichaPerteneceAInstructor(fichaId, instructorId) {
++    const ficha = await prisma.ficha.findFirst({
++      where: { id: fichaId, instructorId },
++      select: { id: true, numero: true },
++    });
++    return ficha;
++  }
++
++  // Un usuario ve: los avisos globales (fichaId null) + los de su(s) propia(s)
++  // ficha(s) según su rol (aprendiz matriculado / instructor a cargo).
++  // El admin ve todo.
++  async findVisiblesParaUsuario({ role, userId }) {
++    let where = { fichaId: null };
++
++    if (role === 'ADMIN') {
++      where = {};
++    } else if (role === 'INSTRUCTOR') {
++      where = {
++        OR: [{ fichaId: null }, { ficha: { instructorId: userId } }],
++      };
++    } else if (role === 'APRENDIZ') {
++      where = {
++        OR: [
++          { fichaId: null },
++          { ficha: { matriculas: { some: { aprendizId: userId } } } },
++        ],
++      };
++    }
++
+     const comunicados = await prisma.comunicado.findMany({
++      where,
+       orderBy: { createdAt: 'desc' },
+       include: {
+-        admin: { select: { firstName: true, lastName: true } },
++        autor: { select: { firstName: true, lastName: true, role: true } },
++        ficha: { select: { id: true, numero: true } },
+         _count: { select: { lecturas: true } },
+       },
+     });
+@@ -25,6 +58,9 @@ class ComunicadoRepository {
+       titulo: c.titulo,
+       mensaje: c.mensaje,
+       destinatario: c.destinatario,
++      fichaId: c.fichaId,
++      fichaNumero: c.ficha?.numero || null,
++      autor: c.autor ? `${c.autor.firstName} ${c.autor.lastName}` : null,
+       fecha: c.createdAt.toISOString().split('T')[0],
+       leidos: c._count?.lecturas || 0,
+     }));
+diff --git a/src/modules/comunicado/routes/comunicadoRoutes.js b/src/modules/comunicado/routes/comunicadoRoutes.js
+index 1b22946..00ba70e 100644
+--- a/src/modules/comunicado/routes/comunicadoRoutes.js
++++ b/src/modules/comunicado/routes/comunicadoRoutes.js
+@@ -19,7 +19,7 @@ router.post('/:id/read', authenticate, comunicadoController.markRead);
+ router.post(
+   '/',
+   authenticate,
+-  authorize('ADMIN'),
++  authorize('ADMIN', 'INSTRUCTOR'),
+   validate({ body: comunicadoValidator.createComunicado }),
+   comunicadoController.create
+ );
+diff --git a/src/modules/comunicado/services/comunicadoService.js b/src/modules/comunicado/services/comunicadoService.js
+index 941bc6c..be4f167 100644
+--- a/src/modules/comunicado/services/comunicadoService.js
++++ b/src/modules/comunicado/services/comunicadoService.js
+@@ -1,17 +1,52 @@
+ const comunicadoRepository = require('../repositories/comunicadoRepository');
++const AppError = require('../../../utils/appError');
+ 
+ class ComunicadoService {
+-  async create(adminId, data) {
+-    return comunicadoRepository.create({
+-      adminId,
+-      titulo: data.titulo,
+-      mensaje: data.mensaje,
+-      destinatario: data.destinatario || 'Todos los usuarios',
+-    });
++  // authorUser = { id, role } del usuario autenticado (viene de req.user)
++  async create(authorUser, data) {
++    const { id: autorId, role } = authorUser;
++
++    if (role === 'ADMIN') {
++      // El admin publica avisos globales: nunca lleva fichaId.
++      return comunicadoRepository.create({
++        autorId,
++        fichaId: null,
++        titulo: data.titulo,
++        mensaje: data.mensaje,
++        destinatario: 'Todos los usuarios',
++      });
++    }
++
++    if (role === 'INSTRUCTOR') {
++      // El instructor SIEMPRE debe indicar una ficha, y tiene que ser una
++      // que él mismo dicta — si no, cualquier instructor podría avisarle
++      // a la ficha de otro.
++      if (!data.fichaId) {
++        throw AppError.badRequest('Debes indicar la ficha a la que va dirigido el aviso');
++      }
++
++      const ficha = await comunicadoRepository.fichaPerteneceAInstructor(data.fichaId, autorId);
++      if (!ficha) {
++        throw AppError.forbidden('Solo puedes publicar avisos en fichas que tienes asignadas');
++      }
++
++      return comunicadoRepository.create({
++        autorId,
++        fichaId: ficha.id,
++        titulo: data.titulo,
++        mensaje: data.mensaje,
++        destinatario: `Ficha ${ficha.numero}`,
++      });
++    }
++
++    throw AppError.forbidden('No tienes permisos para publicar avisos');
+   }
+ 
+-  async findAll() {
+-    return comunicadoRepository.findAll();
++  async findAllForUser(authorUser) {
++    return comunicadoRepository.findVisiblesParaUsuario({
++      role: authorUser.role,
++      userId: authorUser.id,
++    });
+   }
+ 
+   async registerLectura(comunicadoId, userId) {
+diff --git a/src/modules/comunicado/validators/comunicadoValidator.js b/src/modules/comunicado/validators/comunicadoValidator.js
+index 9e5efe9..c865c8e 100644
+--- a/src/modules/comunicado/validators/comunicadoValidator.js
++++ b/src/modules/comunicado/validators/comunicadoValidator.js
+@@ -1,15 +1,17 @@
+ const Joi = require('joi');
+ 
++// destinatario ya no lo escribe el usuario: se calcula en el service a
++// partir de si hay fichaId (aviso de ficha) o no (aviso global de admin).
+ const createComunicado = Joi.object({
+-  destinatario: Joi.string().trim().required().messages({
+-    'string.empty': 'El destinatario es obligatorio',
+-  }),
+   titulo: Joi.string().trim().min(3).required().messages({
+     'string.empty': 'El asunto/título es obligatorio',
+   }),
+   mensaje: Joi.string().trim().min(5).required().messages({
+     'string.empty': 'El cuerpo del mensaje es obligatorio',
+   }),
++  fichaId: Joi.string().uuid().optional().messages({
++    'string.guid': 'El ID de la ficha debe ser un UUID válido',
++  }),
+ });
+ 
+ module.exports = {
+diff --git a/src/modules/usuarios/controllers/userController.js b/src/modules/usuarios/controllers/userController.js
+index c48ba0d..3e8605c 100644
+--- a/src/modules/usuarios/controllers/userController.js
++++ b/src/modules/usuarios/controllers/userController.js
+@@ -8,11 +8,6 @@ class UserController {
+     return created(res, user, 'Usuario creado exitosamente');
+   });
+ 
+-  createByAdmin = catchAsync(async (req, res) => {
+-    const user = await userService.createByAdmin(req.user.id, req.body);
+-    return created(res, user, 'Usuario creado exitosamente por el administrador');
+-  });
+-
+   getAll = catchAsync(async (req, res) => {
+     const { users, pagination } = await userService.findAll(req.query);
+     return paginated(res, users, pagination, 'Usuarios obtenidos exitosamente');
+diff --git a/src/modules/usuarios/routes/adminUserRoutes.js b/src/modules/usuarios/routes/adminUserRoutes.js
+deleted file mode 100644
+index bd1a92f..0000000
+--- a/src/modules/usuarios/routes/adminUserRoutes.js
++++ /dev/null
+@@ -1,12 +0,0 @@
+-const { Router } = require('express');
+-const userController = require('../controllers/userController');
+-const { authenticate, authorize } = require('../../../middlewares/auth');
+-const validate = require('../../../middlewares/validate');
+-const userValidator = require('../validators/userValidator');
+-
+-const router = Router();
+-
+-router.use(authenticate, authorize('ADMIN'));
+-router.post('/users', validate({ body: userValidator.createUser }), userController.createByAdmin);
+-
+-module.exports = router;
+\ No newline at end of file
+diff --git a/src/modules/usuarios/services/userService.js b/src/modules/usuarios/services/userService.js
+index 5d2029c..db5c2e2 100644
+--- a/src/modules/usuarios/services/userService.js
++++ b/src/modules/usuarios/services/userService.js
+@@ -1,7 +1,6 @@
+ const bcrypt = require('bcryptjs');
+ const userRepository = require('../repositories/userRepository');
+ const AppError = require('../../../utils/appError');
+-const logAudit = require('../../../utils/auditLogger');
+ 
+ const SALT_ROUNDS = 12;
+ 
+@@ -30,21 +29,6 @@ class UserService {
+     return user;
+   }
+ 
+-  async createByAdmin(adminId, userData) {
+-    const user = await this.create({
+-      ...userData,
+-      isEmailVerified: true,
+-    });
+-
+-    await logAudit(adminId, 'CREAR_USUARIO_ADMIN', {
+-      userId: user.id,
+-      email: user.email,
+-      role: user.role,
+-    });
+-
+-    return user;
+-  }
+-
+   async findAll(queryParams) {
+     const {
+       page = 1,
+diff --git a/src/modules/usuarios/validators/userValidator.js b/src/modules/usuarios/validators/userValidator.js
+index 4f77660..6e4bdb9 100644
+--- a/src/modules/usuarios/validators/userValidator.js
++++ b/src/modules/usuarios/validators/userValidator.js
+@@ -61,6 +61,11 @@ const queryUsers = Joi.object({
+   order: Joi.string().valid('asc', 'desc').default('desc'),
+ });
+ 
++// El admin solo puede crear cuentas de ADMIN o INSTRUCTOR desde este endpoint.
++// Los aprendices nunca se crean manualmente: se autorregistran y se ubican
++// automáticamente validando su documento contra el roster de la ficha.
++const CREATABLE_ROLES_BY_ADMIN = ['ADMIN', 'INSTRUCTOR'];
++
+ const createUser = Joi.object({
+   firstName: Joi.string().trim().min(2).max(50).required().messages({
+     'string.empty': 'El nombre es obligatorio',
+@@ -73,7 +78,10 @@ const createUser = Joi.object({
+     'string.email': 'Debe proporcionar un email válido',
+   }),
+   password: Joi.string().min(8).max(100).optional(),
+-  role: Joi.string().valid(...ROLES).optional(),
++  role: Joi.string().valid(...CREATABLE_ROLES_BY_ADMIN).required().messages({
++    'any.only': 'El admin solo puede crear cuentas de ADMIN o INSTRUCTOR; los aprendices se autorregistran',
++    'any.required': 'Debes indicar el rol (ADMIN o INSTRUCTOR)',
++  }),
+   phone: Joi.string().trim().allow(null, '').optional(),
+   especialidad: Joi.string().trim().allow(null, '').optional(),
+ });

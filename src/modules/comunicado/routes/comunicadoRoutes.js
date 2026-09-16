@@ -19,7 +19,7 @@ router.post('/:id/read', authenticate, comunicadoController.markRead);
 router.post(
   '/',
   authenticate,
-  authorize('ADMIN'),
+  authorize('ADMIN', 'INSTRUCTOR'),
   validate({ body: comunicadoValidator.createComunicado }),
   comunicadoController.create
 );

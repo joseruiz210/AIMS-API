@@ -77,7 +77,7 @@ model User {
   calificacionesInstructor Calificacion[]         @relation("CalificacionesInstructor")
   observacionesAprendiz    Observacion[]          @relation("ObservacionesAprendiz")
   observacionesInstructor Observacion[]          @relation("ObservacionesInstructor")
-  comunicados              Comunicado[]           @relation("ComunicadosAdmin")
+  comunicados              Comunicado[]           @relation("ComunicadosAutor")
   lecturas                 LecturaComunicado[]    @relation("LecturasComunicado")
   notificaciones           Notificacion[]         @relation("NotificacionesUser")
   mensajesEnviados         Mensaje[]              @relation("MensajesSent")
@@ -151,6 +151,7 @@ model Ficha {
   sesiones        SesionAsistencia[]
   horarios        Horario[]
   evidencias      Evidencia[]
+  comunicados     Comunicado[]
 
   @@map("fichas")
 }
@@ -261,16 +262,21 @@ model Observacion {
 
 model Comunicado {
   id           String              @id @default(uuid())
-  adminId      String              @map("admin_id")
+  autorId      String              @map("autor_id")
+  fichaId      String?             @map("ficha_id")
   titulo       String
   mensaje      String
   destinatario String
   createdAt    DateTime            @default(now()) @map("created_at")
 
-  admin        User                @relation("ComunicadosAdmin", fields: [adminId], references: [id])
+  // fichaId nulo = aviso global (solo lo puede crear ADMIN).
+  // fichaId presente = aviso de un INSTRUCTOR, visible solo para su ficha.
+  autor        User                @relation("ComunicadosAutor", fields: [autorId], references: [id])
+  ficha        Ficha?              @relation(fields: [fichaId], references: [id], onDelete: Cascade)
   lecturas     LecturaComunicado[]
 
-  @@index([adminId])
+  @@index([autorId])
+  @@index([fichaId])
   @@map("comunicados")
 }
 

@@ -1,7 +1,6 @@
 const bcrypt = require('bcryptjs');
 const userRepository = require('../repositories/userRepository');
 const AppError = require('../../../utils/appError');
-const logAudit = require('../../../utils/auditLogger');
 
 const SALT_ROUNDS = 12;
 
@@ -25,21 +24,6 @@ class UserService {
       especialidad: userData.especialidad || null,
       isEmailVerified: true,
       isActive: true,
-    });
-
-    return user;
-  }
-
-  async createByAdmin(adminId, userData) {
-    const user = await this.create({
-      ...userData,
-      isEmailVerified: true,
-    });
-
-    await logAudit(adminId, 'CREAR_USUARIO_ADMIN', {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
     });
 
     return user;

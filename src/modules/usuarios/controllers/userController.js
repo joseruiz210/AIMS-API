@@ -8,11 +8,6 @@ class UserController {
     return created(res, user, 'Usuario creado exitosamente');
   });
 
-  createByAdmin = catchAsync(async (req, res) => {
-    const user = await userService.createByAdmin(req.user.id, req.body);
-    return created(res, user, 'Usuario creado exitosamente por el administrador');
-  });
-
   getAll = catchAsync(async (req, res) => {
     const { users, pagination } = await userService.findAll(req.query);
     return paginated(res, users, pagination, 'Usuarios obtenidos exitosamente');

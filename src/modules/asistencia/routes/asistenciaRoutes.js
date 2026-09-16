@@ -6,61 +6,37 @@ const asistenciaValidator = require('../validators/asistenciaValidator');
 
 const router = Router();
 
-router.use(authenticate);
-
 /**
  * @swagger
- * /asistencia/mis-asistencias:
- *   get:
- *     summary: Obtener reporte de asistencias del aprendiz autenticado
- *     tags: [Asistencia]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Reporte de asistencias obtenido
+ * tags:
+ *   name: Asistencia
+ *   description: Control y Registro de Asistencia Académica
  */
-router.get('/mis-asistencias', asistenciaController.getMisAsistencias);
 
-/**
- * @swagger
- * /asistencia/registrar:
- *   post:
- *     summary: Registrar asistencias masivas para una sesión de formación
- *     tags: [Asistencia]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [registros]
- *             properties:
- *               registros:
- *                 type: array
- *                 items:
- *                   type: object
- *                   required: [fichaAprendizId, horarioId, fecha, estado]
- *                   properties:
- *                     fichaAprendizId:
- *                       type: string
- *                     horarioId:
- *                       type: string
- *                     fecha:
- *                       type: string
- *                       format: date
- *                     estado:
- *                       type: string
- *                       enum: [PRESENTE, AUSENTE, TARDANZA, EXCUSA]
- *                     observacion:
- *                       type: string
- *     responses:
- *       201:
- *         description: Asistencias registradas exitosamente
- */
-router.get('/ficha/:fichaId', authorize('INSTRUCTOR', 'ADMIN'), asistenciaController.getAsistenciasByFicha);
-router.post('/registrar', authorize('INSTRUCTOR', 'ADMIN'), validate(asistenciaValidator.registrarAsistencia), asistenciaController.registrarAsistencia);
+// GET /asistencia/mis-asistencias -> coincide con asistenciaService.getMisAsistencias() del frontend
+router.get('/mis-asistencias', authenticate, authorize('APRENDIZ'), asistenciaController.getMisAsistencias);
+
+// GET /asistencia/ficha/:fichaId -> coincide con asistenciaService.getAsistenciasByFicha() del frontend
+router.get(
+  '/ficha/:fichaId',
+  authenticate,
+  authorize('INSTRUCTOR', 'ADMIN', 'SUPERADMIN'),
+  validate({ params: asistenciaValidator.fichaIdParam }),
+  asistenciaController.getAsistenciasByFicha
+);
+
+// POST /asistencia/registrar -> coincide con asistenciaService.registrarAsistencia() del frontend
+router.post(
+  '/registrar',
+  authenticate,
+  authorize('INSTRUCTOR', 'ADMIN', 'SUPERADMIN'),
+  validate({ body: asistenciaValidator.registrarSesion }),
+  asistenciaController.registrarAsistencia
+);
+
+// NOTA: la ruta '/resumen' (getResumenGlobal) existía antes pero el controller
+// nunca implementó esa función -> se quitó para no romper el router al cargar.
+// Si el panel de ADMIN la necesita, hay que escribir ese método en el
+// controller/service antes de volver a exponerla.
 
 module.exports = router;

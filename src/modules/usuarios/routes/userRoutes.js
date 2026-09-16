@@ -118,7 +118,7 @@ router.put(
 router.get(
   '/',
   authenticate,
-  authorize('ADMIN'),
+  authorize('ADMIN', 'SUPERADMIN'),
   validate({ query: userValidator.queryUsers }),
   userController.getAll
 );
@@ -132,14 +132,6 @@ router.get(
  *     security:
  *       - bearerAuth: []
  */
-router.post(
-  '/',
-  authenticate,
-  authorize('ADMIN'),
-  validate({ body: userValidator.createUser }),
-  userController.create
-);
-
 /**
  * @swagger
  * /users/{id}:
@@ -170,7 +162,7 @@ router.post(
 router.get(
   '/:id',
   authenticate,
-  authorize('ADMIN'),
+  authorize('ADMIN', 'SUPERADMIN'),
   validate({ params: userValidator.id }),
   userController.getById
 );
@@ -228,7 +220,7 @@ router.get(
 router.put(
   '/:id',
   authenticate,
-  authorize('ADMIN'),
+  authorize('ADMIN', 'SUPERADMIN'),
   validate({ params: userValidator.id, body: userValidator.updateUser }),
   userController.update
 );
@@ -263,7 +255,7 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  authorize('ADMIN'),
+  authorize('ADMIN', 'SUPERADMIN'),
   validate({ params: userValidator.id }),
   userController.delete
 );
@@ -298,7 +290,7 @@ router.delete(
 router.patch(
   '/:id/toggle-active',
   authenticate,
-  authorize('ADMIN'),
+  authorize('ADMIN', 'SUPERADMIN'),
   validate({ params: userValidator.id }),
   userController.toggleActive
 );

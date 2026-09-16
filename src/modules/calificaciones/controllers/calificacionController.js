@@ -9,11 +9,11 @@ exports.getMisCalificaciones = catchAsync(async (req, res) => {
 
 exports.getCalificacionesByFicha = catchAsync(async (req, res) => {
   const { fichaId } = req.params;
-  const data = await calificacionService.getCalificacionesByFicha(fichaId);
+  const data = await calificacionService.getCalificacionesByFicha(fichaId, req.user);
   ApiResponse.success(res, data, 'Calificaciones de la ficha obtenidas exitosamente');
 });
 
 exports.registrarCalificacion = catchAsync(async (req, res) => {
-  const resultado = await calificacionService.registrarCalificacion(req.user.id, req.body);
+  const resultado = await calificacionService.registrarCalificacion(req.user.id, req.body, req.user.role);
   ApiResponse.created(res, resultado, 'Calificación registrada exitosamente');
 });

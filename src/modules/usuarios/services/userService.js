@@ -31,6 +31,13 @@ class UserService {
   }
 
   async createByAdmin(adminId, userData) {
+    const requester = await userRepository.findById(adminId);
+    if (userData.role === 'ADMIN' && requester?.role !== 'SUPERADMIN') {
+      throw AppError.forbidden('Solo SUPERADMIN puede crear cuentas ADMIN');
+    }
+    if (userData.role === 'SUPERADMIN') {
+      throw AppError.forbidden('No se pueden crear cuentas SUPERADMIN desde este endpoint');
+    }
     const user = await this.create({
       ...userData,
       isEmailVerified: true,

@@ -3,6 +3,22 @@ const fichaController = require('../controllers/fichaController');
 const { authenticate, authorize } = require('../../../middlewares/auth');
 const validate = require('../../../middlewares/validate');
 const fichaValidator = require('../validators/fichaValidator');
+const AppError = require('../../../utils/appError');
+const multer = require('multer');
+
+const upload = multer({
+	storage: multer.memoryStorage(),
+	limits: { fileSize: 5 * 1024 * 1024 },
+	fileFilter: (_req, file, callback) => {
+		if (/\.(csv|xls|xlsx)$/i.test(file.originalname)) return callback(null, true);
+		callback(new Error('Solo se permiten archivos CSV, XLS o XLSX'));
+	},
+});
+
+const uploadLearnersFile = (req, res, next) => upload.single('archivo')(req, res, (error) => {
+	if (error) return next(AppError.badRequest(error.message));
+	next();
+});
 
 const router = Router();
 
@@ -79,7 +95,7 @@ router.get('/:id', validate(fichaValidator.idParam), fichaController.getById);
  *       201:
  *         description: Ficha creada exitosamente
  */
-router.post('/', authorize('ADMIN', 'INSTRUCTOR'), validate(fichaValidator.createFicha), fichaController.create);
+router.post('/', authorize('ADMIN', 'SUPERADMIN'), validate(fichaValidator.createFicha), fichaController.create);
 
 /**
  * @swagger
@@ -114,7 +130,7 @@ router.post('/', authorize('ADMIN', 'INSTRUCTOR'), validate(fichaValidator.creat
  *       200:
  *         description: Ficha actualizada
  */
-router.put('/:id', authorize('ADMIN', 'INSTRUCTOR'), validate({ params: fichaValidator.idParam, body: fichaValidator.updateFicha }), fichaController.update);
+router.put('/:id', authorize('ADMIN', 'SUPERADMIN', 'INSTRUCTOR'), validate({ params: fichaValidator.idParam, body: fichaValidator.updateFicha }), fichaController.update);
 
 /**
  * @swagger
@@ -190,5 +206,11 @@ router.post('/:id/aprendices', authorize('ADMIN', 'INSTRUCTOR'), validate({ para
  *         description: Aprendiz removido de la ficha
  */
 router.delete('/:id/aprendices/:aprendizId', authorize('ADMIN'), validate(fichaValidator.aprendizIdParam), fichaController.removeAprendiz);
+
+router.post('/:id/aprendices/carga', authorize('INSTRUCTOR'), validate(fichaValidator.idParam), uploadLearnersFile, fichaController.importAprendices);
+
+router.post('/:id/instructores', authorize('ADMIN', 'SUPERADMIN'), validate({ params: fichaValidator.idParam, body: fichaValidator.instructorAssignment }), fichaController.assignInstructor);
+router.patch('/:id/instructor-lider', authorize('ADMIN', 'SUPERADMIN'), validate({ params: fichaValidator.idParam, body: fichaValidator.instructorLeader }), fichaController.setLeader);
+router.delete('/:id/instructores/:instructorId', authorize('ADMIN', 'SUPERADMIN'), validate(fichaValidator.instructorAssignmentParam), fichaController.removeInstructor);
 
 module.exports = router;

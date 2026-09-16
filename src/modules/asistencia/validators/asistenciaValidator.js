@@ -1,58 +1,61 @@
 const Joi = require('joi');
 
-const ESTADOS_ASISTENCIA = ['PRESENTE', 'AUSENTE', 'TARDANZA', 'EXCUSA'];
-
+// OJO: acepta 'EXCUSA' y 'EXCUSADO' porque el código del proyecto usa ambos
+// nombres en distintos lugares (revisar el enum real en schema.prisma y
+// dejar solo uno). Ver nota en el resumen del chat.
 const registroItem = Joi.object({
-  fichaAprendizId: Joi.string().uuid().required().messages({
-    'string.guid': 'El fichaAprendizId debe ser un UUID válido',
-    'any.required': 'El fichaAprendizId es requerido',
+  aprendizId: Joi.string().uuid().required().messages({
+    'string.empty': 'El ID del aprendiz es obligatorio',
   }),
-  horarioId: Joi.string().uuid().required().messages({
-    'string.guid': 'El horarioId debe ser un UUID válido',
-    'any.required': 'El horarioId es requerido',
+  estado: Joi.string().valid('PRESENTE', 'AUSENTE', 'EXCUSA', 'EXCUSADO').required().messages({
+    'any.only': 'El estado debe ser PRESENTE, AUSENTE o EXCUSA',
+    'string.empty': 'El estado de asistencia es obligatorio',
   }),
-  fecha: Joi.date().iso().required().messages({
-    'date.format': 'La fecha debe ser en formato ISO válido',
-    'any.required': 'La fecha es requerida',
-  }),
-  estado: Joi.string()
-    .valid(...ESTADOS_ASISTENCIA)
-    .default('PRESENTE')
-    .messages({
-      'any.only': `El estado debe ser uno de: ${ESTADOS_ASISTENCIA.join(', ')}`,
-    }),
-  observacion: Joi.string().trim().max(255).allow(null, '').optional(),
+  observacion: Joi.string().trim().allow(null, '').optional(),
 });
 
-const registrarAsistencia = Joi.object({
-  registros: Joi.array().items(registroItem).min(1).required().messages({
-    'array.min': 'Debe enviar al menos un registro de asistencia',
-    'any.required': 'El campo registros es requerido',
-  }),
-  fichaId: Joi.string().uuid().optional(),
+const registroLegacy = Joi.object({
+  fichaAprendizId: Joi.string().uuid().required(),
+  horarioId: Joi.string().uuid().optional(),
   fecha: Joi.date().iso().optional(),
-  tema: Joi.string().allow(null, '').optional(),
-  asistencias: Joi.array().items(
-    Joi.object({
-      aprendizId: Joi.string().uuid().required(),
-      estado: Joi.string().valid(...ESTADOS_ASISTENCIA).default('PRESENTE'),
-      observacion: Joi.string().trim().max(255).allow(null, '').optional(),
-    })
-  ).optional(),
-  registros: Joi.array().items(
-    Joi.object({
-      fichaAprendizId: Joi.string().uuid().optional(),
-      aprendizId: Joi.string().uuid().optional(),
-      horarioId: Joi.string().uuid().optional(),
-      fecha: Joi.date().iso().optional(),
-      estado: Joi.string().valid(...ESTADOS_ASISTENCIA).default('PRESENTE'),
-      observacion: Joi.string().trim().max(255).allow(null, '').optional(),
-    })
-  ).optional(),
-}).or('asistencias', 'registros').messages({
-  'object.missing': 'Debe enviar al menos el arreglo de asistencias o registros',
+  estado: Joi.string().valid('PRESENTE', 'AUSENTE', 'EXCUSA', 'EXCUSADO').required(),
+  observacion: Joi.string().trim().allow(null, '').optional(),
+});
+
+const registrarSesion = Joi.object({
+  fichaId: Joi.string().uuid().optional().messages({
+    'string.empty': 'El ID de la ficha no puede estar vacío',
+  }),
+  fecha: Joi.date().iso().optional(),
+  tema: Joi.string().trim().min(3).max(150).optional().messages({
+    'string.min': 'El tema de la sesión debe tener al menos 3 caracteres',
+  }),
+  asistencias: Joi.array().items(registroItem).min(1).optional().messages({
+    'array.min': 'Debe enviar al menos un registro de asistencia',
+  }),
+  registros: Joi.alternatives()
+    .try(
+      Joi.array().items(registroItem).min(1),
+      Joi.array().items(registroLegacy).min(1)
+    )
+    .optional(),
+}).custom((value, helpers) => {
+  const lista = value.asistencias || value.registros;
+  if (!lista) return helpers.error('any.custom');
+  const isLegacy = lista.every((item) => item.fichaAprendizId);
+  if (!value.fichaId && !isLegacy) return helpers.error('any.custom');
+  if (value.fichaId && isLegacy) return helpers.error('any.custom');
+  return value;
+}).messages({
+  'any.custom': 'Debe enviar fichaId con aprendices o el formato legacy fichaAprendizId',
+});
+const fichaIdParam = Joi.object({
+  fichaId: Joi.string().uuid().required().messages({
+    'string.guid': 'El ID de la ficha debe ser un UUID válido',
+  }),
 });
 
 module.exports = {
-  registrarAsistencia,
+  registrarSesion,
+  fichaIdParam,
 };

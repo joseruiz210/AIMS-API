@@ -7,6 +7,7 @@ datasource db {
 }
 
 enum Role {
+  SUPERADMIN
   ADMIN
   INSTRUCTOR
   APRENDIZ
@@ -53,6 +54,9 @@ model User {
   password                 String?
   authProvider             AuthProvider    @default(LOCAL) @map("auth_provider")
   role                     Role            @default(APRENDIZ)
+  documentType             String?         @map("document_type")
+  documentNumber           String?         @map("document_number")
+  isPreRegistered          Boolean         @default(false) @map("is_pre_registered")
   estadoAcademico          EstadoAprendiz? @default(EN_FORMACION) @map("estado_academico")
   phone                    String?
   especialidad             String?
@@ -69,21 +73,23 @@ model User {
   updatedAt                DateTime        @updatedAt @map("updated_at")
 
   refreshTokens            RefreshToken[]
-  instructorFichas         Ficha[]                @relation("InstructorFichas")
-  matriculas               Matricula[]            @relation("MatriculasAprendiz")
-  asistencias              RegistroAsistencia[]   @relation("AsistenciasAprendiz")
-  calificacionesAprendiz   Calificacion[]         @relation("CalificacionesAprendiz")
-  calificacionesInstructor Calificacion[]         @relation("CalificacionesInstructor")
-  observacionesAprendiz    Observacion[]          @relation("ObservacionesAprendiz")
-  observacionesInstructor Observacion[]          @relation("ObservacionesInstructor")
-  comunicados              Comunicado[]           @relation("ComunicadosAdmin")
-  lecturas                 LecturaComunicado[]    @relation("LecturasComunicado")
-  notificaciones           Notificacion[]         @relation("NotificacionesUser")
-  mensajesEnviados         Mensaje[]              @relation("MensajesSent")
-  mensajesRecibidos        Mensaje[]              @relation("MensajesReceived")
+  instructorFichas         Ficha[]              @relation("InstructorFichas")
+  matriculas               Matricula[]          @relation("MatriculasAprendiz")
+  asistencias              RegistroAsistencia[] @relation("AsistenciasAprendiz")
+  calificacionesAprendiz   Calificacion[]       @relation("CalificacionesAprendiz")
+  calificacionesInstructor Calificacion[]       @relation("CalificacionesInstructor")
+  observacionesAprendiz    Observacion[]        @relation("ObservacionesAprendiz")
+  observacionesInstructor  Observacion[]        @relation("ObservacionesInstructor")
+  comunicados              Comunicado[]         @relation("ComunicadosAdmin")
+  lecturas                 LecturaComunicado[]  @relation("LecturasComunicado")
+  notificaciones           Notificacion[]       @relation("NotificacionesUser")
+  mensajesEnviados         Mensaje[]            @relation("MensajesSent")
+  mensajesRecibidos        Mensaje[]            @relation("MensajesReceived")
   auditLogs                AuditLog[]
-  evidenciasComoInstructor Evidencia[]            @relation("InstructorEvidencias")
-  entregasComoAprendiz     EntregaEvidencia[]     @relation("AprendizEntregas")
+  evidenciasComoInstructor Evidencia[]          @relation("InstructorEvidencias")
+  entregasComoAprendiz     EntregaEvidencia[]   @relation("AprendizEntregas")
+  cargasAprendices         CargaAprendices[]    @relation("CargasAprendices")
+  instructorAssignments    InstructorFicha[]    @relation("InstructorAssignments")
 
   @@map("users")
 }
@@ -102,54 +108,73 @@ model RefreshToken {
 }
 
 model Programa {
-  id                String        @id @default(uuid())
+  id                String   @id @default(uuid())
   nombre            String
-  codigo            String        @unique
-  nivel             String?       @default("Tecnólogo")
-  duracion          String?       @default("24 meses")
-  competenciasCount Int           @default(0) @map("competencias_count")
-  duracionMeses     Int?          @map("duracion_meses")
-  estado            String        @default("Activo")
-  createdAt         DateTime      @default(now()) @map("created_at")
-  updatedAt         DateTime      @updatedAt @map("updated_at")
+  codigo            String   @unique
+  nivel             String?  @default("Tecnólogo")
+  duracion          String?  @default("24 meses")
+  competenciasCount Int      @default(0) @map("competencias_count")
+  duracionMeses     Int?     @map("duracion_meses")
+  estado            String   @default("Activo")
+  centroFormacion   String   @default("CTMA") @map("centro_formacion")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
-  fichas            Ficha[]
-  competencias      Competencia[]
-  modulos           Modulo[]
+  fichas       Ficha[]
+  competencias Competencia[]
+  modulos      Modulo[]
 
   @@map("programas")
 }
 
 model Modulo {
-  id             String         @id @default(uuid())
+  id             String   @id @default(uuid())
   nombre         String
-  horasFormacion Int            @map("horas_formacion")
-  programaId     String         @map("programa_id")
-  programa       Programa       @relation(fields: [programaId], references: [id], onDelete: Cascade)
-  createdAt      DateTime       @default(now()) @map("created_at")
+  horasFormacion Int      @map("horas_formacion")
+  programaId     String   @map("programa_id")
+  programa       Programa @relation(fields: [programaId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now()) @map("created_at")
 
   @@map("modulos")
 }
 
 model Ficha {
-  id           String             @id @default(uuid())
-  numero       String             @unique
-  badgeCode    String?            @map("badge_code")
-  jornada      String?            @default("Mañana")
-  estado       String             @default("Activo")
-  programaId   String             @map("programa_id")
-  instructorId String?            @map("instructor_id")
-  createdAt    DateTime           @default(now()) @map("created_at")
-  updatedAt    DateTime           @updatedAt @map("updated_at")
+  id           String   @id @default(uuid())
+  numero       String   @unique
+  badgeCode    String?  @map("badge_code")
+  jornada      String?  @default("Mañana")
+  estado       String   @default("Activo")
+  programaId   String   @map("programa_id")
+  instructorId String?  @map("instructor_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  programa     Programa           @relation(fields: [programaId], references: [id])
-  instructor   User?              @relation("InstructorFichas", fields: [instructorId], references: [id])
-  matriculas   Matricula[]
-  sesiones     SesionAsistencia[]
-  horarios     Horario[]
-  evidencias   Evidencia[]
+  programa              Programa           @relation(fields: [programaId], references: [id])
+  instructor            User?              @relation("InstructorFichas", fields: [instructorId], references: [id])
+  matriculas            Matricula[]
+  sesiones              SesionAsistencia[]
+  horarios              Horario[]
+  evidencias            Evidencia[]
+  cargas                CargaAprendices[]
+  instructorAssignments InstructorFicha[]
 
   @@map("fichas")
+}
+
+model InstructorFicha {
+  id           String   @id @default(uuid())
+  fichaId      String   @map("ficha_id")
+  instructorId String   @map("instructor_id")
+  isLeader     Boolean  @default(false) @map("is_leader")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  ficha      Ficha @relation(fields: [fichaId], references: [id], onDelete: Cascade)
+  instructor User  @relation("InstructorAssignments", fields: [instructorId], references: [id], onDelete: Cascade)
+
+  @@unique([fichaId, instructorId])
+  @@index([fichaId, isLeader])
+  @@index([instructorId])
+  @@map("instructor_fichas")
 }
 
 model Matricula {
@@ -161,21 +186,38 @@ model Matricula {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  ficha          Ficha    @relation(fields: [fichaId], references: [id], onDelete: Cascade)
-  aprendiz       User     @relation("MatriculasAprendiz", fields: [aprendizId], references: [id], onDelete: Cascade)
+  ficha    Ficha @relation(fields: [fichaId], references: [id], onDelete: Cascade)
+  aprendiz User  @relation("MatriculasAprendiz", fields: [aprendizId], references: [id], onDelete: Cascade)
 
+  @@unique([fichaId, aprendizId])
   @@index([fichaId])
   @@index([aprendizId])
-  @@unique([fichaId, aprendizId])
   @@map("matriculas")
 }
 
+model CargaAprendices {
+  id           String   @id @default(uuid())
+  fichaId      String   @map("ficha_id")
+  uploadedById String   @map("uploaded_by_id")
+  fileName     String   @map("file_name")
+  totalRows    Int      @map("total_rows")
+  createdRows  Int      @map("created_rows")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  ficha      Ficha @relation(fields: [fichaId], references: [id], onDelete: Cascade)
+  uploadedBy User  @relation("CargasAprendices", fields: [uploadedById], references: [id])
+
+  @@index([fichaId])
+  @@index([uploadedById])
+  @@map("cargas_aprendices")
+}
+
 model SesionAsistencia {
-  id        String               @id @default(uuid())
-  fichaId   String               @map("ficha_id")
-  fecha     DateTime             @default(now())
+  id        String   @id @default(uuid())
+  fichaId   String   @map("ficha_id")
+  fecha     DateTime @default(now())
   tema      String?
-  createdAt DateTime             @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   ficha     Ficha                @relation(fields: [fichaId], references: [id], onDelete: Cascade)
   registros RegistroAsistencia[]
@@ -185,28 +227,28 @@ model SesionAsistencia {
 }
 
 model RegistroAsistencia {
-  id          String           @id @default(uuid())
-  sesionId    String           @map("sesion_id")
-  aprendizId  String           @map("aprendiz_id")
+  id          String   @id @default(uuid())
+  sesionId    String   @map("sesion_id")
+  aprendizId  String   @map("aprendiz_id")
   estado      String
   observacion String?
-  createdAt   DateTime         @default(now()) @map("created_at")
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  sesion      SesionAsistencia @relation(fields: [sesionId], references: [id], onDelete: Cascade)
-  aprendiz    User             @relation("AsistenciasAprendiz", fields: [aprendizId], references: [id], onDelete: Cascade)
+  sesion   SesionAsistencia @relation(fields: [sesionId], references: [id], onDelete: Cascade)
+  aprendiz User             @relation("AsistenciasAprendiz", fields: [aprendizId], references: [id], onDelete: Cascade)
 
+  @@unique([sesionId, aprendizId])
   @@index([sesionId])
   @@index([aprendizId])
-  @@unique([sesionId, aprendizId])
   @@map("registros_asistencia")
 }
 
 model Competencia {
-  id             String         @id @default(uuid())
-  nombre         String
-  codigo         String
-  programaId     String         @map("programa_id")
-  createdAt      DateTime       @default(now()) @map("created_at")
+  id         String   @id @default(uuid())
+  nombre     String
+  codigo     String
+  programaId String   @map("programa_id")
+  createdAt  DateTime @default(now()) @map("created_at")
 
   programa       Programa       @relation(fields: [programaId], references: [id], onDelete: Cascade)
   calificaciones Calificacion[]
@@ -216,19 +258,19 @@ model Competencia {
 }
 
 model Calificacion {
-  id            String       @id @default(uuid())
-  aprendizId    String       @map("aprendiz_id")
-  competenciaId String?      @map("competencia_id")
-  instructorId  String?      @map("instructor_id")
-  nota          Decimal      @db.Decimal(3, 1)
+  id            String   @id @default(uuid())
+  aprendizId    String   @map("aprendiz_id")
+  competenciaId String?  @map("competencia_id")
+  instructorId  String?  @map("instructor_id")
+  nota          Decimal  @db.Decimal(3, 1)
   periodo       String?
-  estado        String?      @default("Aprobado")
-  createdAt     DateTime     @default(now()) @map("created_at")
-  updatedAt     DateTime     @updatedAt @map("updated_at")
+  estado        String?  @default("Aprobado")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  aprendiz      User         @relation("CalificacionesAprendiz", fields: [aprendizId], references: [id], onDelete: Cascade)
-  competencia   Competencia? @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
-  instructor    User?        @relation("CalificacionesInstructor", fields: [instructorId], references: [id])
+  aprendiz    User         @relation("CalificacionesAprendiz", fields: [aprendizId], references: [id], onDelete: Cascade)
+  competencia Competencia? @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  instructor  User?        @relation("CalificacionesInstructor", fields: [instructorId], references: [id])
 
   @@index([aprendizId])
   @@index([competenciaId])
@@ -246,8 +288,8 @@ model Observacion {
   fecha        DateTime @default(now())
   createdAt    DateTime @default(now()) @map("created_at")
 
-  aprendiz     User     @relation("ObservacionesAprendiz", fields: [aprendizId], references: [id], onDelete: Cascade)
-  instructor   User     @relation("ObservacionesInstructor", fields: [instructorId], references: [id])
+  aprendiz   User @relation("ObservacionesAprendiz", fields: [aprendizId], references: [id], onDelete: Cascade)
+  instructor User @relation("ObservacionesInstructor", fields: [instructorId], references: [id])
 
   @@index([aprendizId])
   @@index([instructorId])
@@ -255,32 +297,32 @@ model Observacion {
 }
 
 model Comunicado {
-  id           String              @id @default(uuid())
-  adminId      String              @map("admin_id")
+  id           String   @id @default(uuid())
+  adminId      String   @map("admin_id")
   titulo       String
   mensaje      String
   destinatario String
-  createdAt    DateTime            @default(now()) @map("created_at")
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  admin        User                @relation("ComunicadosAdmin", fields: [adminId], references: [id])
-  lecturas     LecturaComunicado[]
+  admin    User                @relation("ComunicadosAdmin", fields: [adminId], references: [id])
+  lecturas LecturaComunicado[]
 
   @@index([adminId])
   @@map("comunicados")
 }
 
 model LecturaComunicado {
-  id           String     @id @default(uuid())
-  comunicadoId String     @map("comunicado_id")
-  userId       String     @map("user_id")
-  leidoAt      DateTime   @default(now()) @map("leido_at")
+  id           String   @id @default(uuid())
+  comunicadoId String   @map("comunicado_id")
+  userId       String   @map("user_id")
+  leidoAt      DateTime @default(now()) @map("leido_at")
 
-  comunicado   Comunicado @relation(fields: [comunicadoId], references: [id], onDelete: Cascade)
-  user         User       @relation("LecturasComunicado", fields: [userId], references: [id], onDelete: Cascade)
+  comunicado Comunicado @relation(fields: [comunicadoId], references: [id], onDelete: Cascade)
+  user       User       @relation("LecturasComunicado", fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([comunicadoId, userId])
   @@index([userId])
   @@index([comunicadoId])
-  @@unique([comunicadoId, userId])
   @@map("lecturas_comunicados")
 }
 
@@ -293,7 +335,7 @@ model Notificacion {
   leida     Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
 
-  user      User     @relation("NotificacionesUser", fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation("NotificacionesUser", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, leida])
   @@index([userId])
@@ -308,8 +350,8 @@ model Mensaje {
   leido      Boolean  @default(false)
   createdAt  DateTime @default(now()) @map("created_at")
 
-  sender     User     @relation("MensajesSent", fields: [senderId], references: [id], onDelete: Cascade)
-  receptor   User     @relation("MensajesReceived", fields: [receptorId], references: [id], onDelete: Cascade)
+  sender   User @relation("MensajesSent", fields: [senderId], references: [id], onDelete: Cascade)
+  receptor User @relation("MensajesReceived", fields: [receptorId], references: [id], onDelete: Cascade)
 
   @@index([senderId])
   @@index([receptorId])
@@ -325,7 +367,7 @@ model Horario {
   aula       String?
   createdAt  DateTime @default(now()) @map("created_at")
 
-  ficha      Ficha    @relation(fields: [fichaId], references: [id], onDelete: Cascade)
+  ficha Ficha @relation(fields: [fichaId], references: [id], onDelete: Cascade)
 
   @@index([fichaId])
   @@map("horarios")
@@ -383,8 +425,8 @@ model EntregaEvidencia {
   nota         Decimal?  @db.Decimal(3, 1)
   fechaEntrega DateTime  @default(now()) @map("fecha_entrega")
 
+  @@unique([evidenciaId, aprendizId])
   @@index([evidenciaId])
   @@index([aprendizId])
-  @@unique([evidenciaId, aprendizId])
   @@map("entrega_evidencias")
 }

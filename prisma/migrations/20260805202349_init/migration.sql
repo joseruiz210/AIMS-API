@@ -1,0 +1,3 @@
+-- Migración histórica reservada. El esquema inicial existente fue creado por
+-- 20260827012017_init_aims_schema; esta carpeta se conserva para sincronizar
+-- el historial local sin ejecutar cambios adicionales.

@@ -6,7 +6,7 @@ const userValidator = require('../validators/userValidator');
 
 const router = Router();
 
-router.use(authenticate, authorize('ADMIN'));
+router.use(authenticate, authorize('ADMIN', 'SUPERADMIN'));
 router.post('/users', validate({ body: userValidator.createUser }), userController.createByAdmin);
 
 module.exports = router;

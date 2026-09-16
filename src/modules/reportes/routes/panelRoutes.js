@@ -4,7 +4,7 @@ const { authenticate, authorize } = require('../../../middlewares/auth');
 
 const router = Router();
 
-router.use(authenticate, authorize('ADMIN'));
+router.use(authenticate, authorize('ADMIN', 'SUPERADMIN'));
 router.get('/stats', panelController.getStats);
 router.get('/recent-activity', panelController.getRecentActivity);
 

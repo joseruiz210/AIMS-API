@@ -29,7 +29,7 @@ jobs:
           JWT_SECRET: dummy-jwt-secret-for-build-step
         run: |
           npm install
-          npx prisma generate --if-present
+          npx prisma generate
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4

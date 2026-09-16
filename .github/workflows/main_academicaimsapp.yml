@@ -24,6 +24,9 @@ jobs:
           node-version: '22.x'
 
       - name: npm install and generate prisma
+        env:
+          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+          JWT_SECRET: dummy-jwt-secret-for-build-step
         run: |
           npm install
           npx prisma generate --if-present

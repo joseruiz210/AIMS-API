@@ -1,13 +1,13 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const env = require('../../../config/env');
+const prisma = require('../../../config/database');
 const userRepository = require('../../usuarios/repositories/userRepository');
 const authRepository = require('../repositories/authRepository');
 const AppError = require('../../../utils/appError');
 const { generateRandomToken, hashToken } = require('../../../utils/token');
 const { sendVerificationEmail, sendPasswordResetEmail, sendMagicLinkEmail } = require('../../../utils/mailer');
 const { resolveRoleFromEmail } = require('../../../utils/roleResolver');
-const prisma = require('../../../config/database');
 
 const SALT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || '10', 10);
 
@@ -21,28 +21,46 @@ class AuthService {
 
     let preRegisteredUser = null;
     if (resolvedRole === 'APRENDIZ') {
-      if (!userData.documentType || !userData.documentNumber || !userData.programaId || !userData.fichaId) {
+      const docType = (userData.documentType || '').trim().toUpperCase();
+      const docNum = (userData.documentNumber || '').trim();
+      const fichaParam = (userData.fichaId || userData.ficha || userData.fichaNumero || '').trim();
+      const programaParam = (userData.programaId || userData.programa || '').trim();
+
+      if (!docType || !docNum || !fichaParam || !programaParam) {
         throw AppError.badRequest('Para registrarte como aprendiz debes indicar documento, programa y ficha');
       }
 
+      // Buscar la ficha por ID o por número de ficha
+      const fichaObj = await prisma.ficha.findFirst({
+        where: {
+          OR: [
+            { id: fichaParam },
+            { numero: fichaParam },
+          ],
+        },
+        include: { programa: true },
+      });
+
+      if (!fichaObj) {
+        throw AppError.badRequest('La ficha especificada no existe en el sistema');
+      }
+
+      // Buscar el usuario precargado
       preRegisteredUser = await prisma.user.findFirst({
         where: {
           email,
           role: 'APRENDIZ',
-          documentType: userData.documentType.trim().toUpperCase(),
-          documentNumber: userData.documentNumber.trim(),
+          documentType: docType,
+          documentNumber: docNum,
           isPreRegistered: true,
           matriculas: {
             some: {
-              fichaId: userData.fichaId,
-              ficha: {
-                programaId: userData.programaId,
-                programa: { centroFormacion: 'CTMA' },
-              },
+              fichaId: fichaObj.id,
             },
           },
         },
       });
+
       if (!preRegisteredUser) {
         throw AppError.badRequest('Los datos no coinciden con un aprendiz precargado en la ficha');
       }
@@ -86,8 +104,10 @@ class AuthService {
       });
     }
 
+    const { password: _, emailVerificationToken: __, ...safeUser } = user;
+
     return {
-      user,
+      user: safeUser,
       message: shouldAutoVerify
         ? 'Usuario registrado y activado exitosamente.'
         : 'Usuario registrado exitosamente. Se ha enviado un correo para verificar tu cuenta.',

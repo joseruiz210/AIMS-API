@@ -40,8 +40,13 @@ exports.removeAprendiz = catchAsync(async (req, res) => {
 });
 
 exports.importAprendices = catchAsync(async (req, res) => {
-  const carga = await fichaService.importAprendices(req.user.id, req.params.id, req.file);
+  const carga = await fichaService.importAprendices(req.user.id, req.params.id, req.file, req.user);
   ApiResponse.created(res, carga, 'Aprendices cargados en la ficha exitosamente');
+});
+
+exports.importAprendicesGeneral = catchAsync(async (req, res) => {
+  const carga = await fichaService.importAprendicesGeneral(req.user.id, req.file, req.user);
+  ApiResponse.created(res, carga, 'Fichas y aprendices cargados exitosamente');
 });
 
 exports.assignInstructor = catchAsync(async (req, res) => {

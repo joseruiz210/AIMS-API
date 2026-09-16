@@ -69,6 +69,7 @@ model User {
   emailVerificationExpires DateTime?       @map("email_verification_expires")
   resetPasswordToken       String?         @map("reset_password_token")
   resetPasswordExpires     DateTime?       @map("reset_password_expires")
+  pushToken                String?         @map("push_token")
   createdAt                DateTime        @default(now()) @map("created_at")
   updatedAt                DateTime        @updatedAt @map("updated_at")
 
@@ -80,7 +81,7 @@ model User {
   calificacionesInstructor Calificacion[]       @relation("CalificacionesInstructor")
   observacionesAprendiz    Observacion[]        @relation("ObservacionesAprendiz")
   observacionesInstructor  Observacion[]        @relation("ObservacionesInstructor")
-  comunicados              Comunicado[]         @relation("ComunicadosAdmin")
+  comunicados              Comunicado[]         @relation("ComunicadosAutor")
   lecturas                 LecturaComunicado[]  @relation("LecturasComunicado")
   notificaciones           Notificacion[]       @relation("NotificacionesUser")
   mensajesEnviados         Mensaje[]            @relation("MensajesSent")
@@ -139,15 +140,17 @@ model Modulo {
 }
 
 model Ficha {
-  id           String   @id @default(uuid())
-  numero       String   @unique
-  badgeCode    String?  @map("badge_code")
-  jornada      String?  @default("Mañana")
-  estado       String   @default("Activo")
-  programaId   String   @map("programa_id")
-  instructorId String?  @map("instructor_id")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id              String   @id @default(uuid())
+  numero          String   @unique
+  badgeCode       String?  @map("badge_code")
+  jornada         String?  @default("Mañana")
+  estado          String   @default("Activo")
+  sede            String?
+  trimestreActual Int?     @map("trimestre_actual")
+  programaId      String   @map("programa_id")
+  instructorId    String?  @map("instructor_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   programa              Programa           @relation(fields: [programaId], references: [id])
   instructor            User?              @relation("InstructorFichas", fields: [instructorId], references: [id])
@@ -157,6 +160,7 @@ model Ficha {
   evidencias            Evidencia[]
   cargas                CargaAprendices[]
   instructorAssignments InstructorFicha[]
+  comunicados           Comunicado[]
 
   @@map("fichas")
 }
@@ -181,6 +185,8 @@ model Matricula {
   id             String   @id @default(uuid())
   fichaId        String   @map("ficha_id")
   aprendizId     String   @map("aprendiz_id")
+  trimestre      Int?     @default(1)
+  sede           String?
   fechaMatricula DateTime @default(now()) @map("fecha_matricula")
   estado         String   @default("Activo")
   createdAt      DateTime @default(now()) @map("created_at")
@@ -298,16 +304,21 @@ model Observacion {
 
 model Comunicado {
   id           String   @id @default(uuid())
-  adminId      String   @map("admin_id")
+  autorId      String   @map("autor_id")
+  fichaId      String?  @map("ficha_id")
   titulo       String
   mensaje      String
   destinatario String
   createdAt    DateTime @default(now()) @map("created_at")
 
-  admin    User                @relation("ComunicadosAdmin", fields: [adminId], references: [id])
+  // fichaId nulo = aviso global (solo lo puede crear ADMIN).
+  // fichaId presente = aviso de un INSTRUCTOR, visible solo para su ficha.
+  autor    User                @relation("ComunicadosAutor", fields: [autorId], references: [id])
+  ficha    Ficha?              @relation(fields: [fichaId], references: [id], onDelete: Cascade)
   lecturas LecturaComunicado[]
 
-  @@index([adminId])
+  @@index([autorId])
+  @@index([fichaId])
   @@map("comunicados")
 }
 

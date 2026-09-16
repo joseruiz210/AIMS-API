@@ -3,7 +3,7 @@ const notificacionRepository = require('../repositories/notificacionRepository')
 class NotificacionService {
   async getMisNotificaciones(userId) {
     const list = await notificacionRepository.getByUser(userId);
-    const unreadCount = list.filter(n => !n.leido).length;
+    const unreadCount = list.filter(n => !n.leida).length;
     return {
       unreadCount,
       notificaciones: list,

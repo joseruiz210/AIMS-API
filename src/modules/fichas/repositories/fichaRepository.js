@@ -61,6 +61,8 @@ class FichaRepository {
         fechaFin: data.fechaFin ? new Date(data.fechaFin) : null,
         programaId: data.programaId,
         instructorId: data.instructorId || null,
+        sede: data.sede || null,
+        trimestreActual: data.trimestreActual !== undefined ? Number(data.trimestreActual) : null,
       },
     });
   }

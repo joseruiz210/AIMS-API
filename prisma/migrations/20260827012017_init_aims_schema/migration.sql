@@ -220,83 +220,123 @@ CREATE TABLE "configuracion_institucional" (
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
--- CreateIndex
 CREATE UNIQUE INDEX "refresh_tokens_token_key" ON "refresh_tokens"("token");
 
--- CreateIndex
 CREATE UNIQUE INDEX "programas_codigo_key" ON "programas"("codigo");
 
--- CreateIndex
 CREATE UNIQUE INDEX "fichas_numero_key" ON "fichas"("numero");
 
--- CreateIndex
-CREATE UNIQUE INDEX "matriculas_ficha_id_aprendiz_id_key" ON "matriculas"("ficha_id", "aprendiz_id");
+CREATE UNIQUE INDEX "matriculas_ficha_id_aprendiz_id_key"
+ON "matriculas"("ficha_id", "aprendiz_id");
 
--- CreateIndex
-CREATE UNIQUE INDEX "registros_asistencia_sesion_id_aprendiz_id_key" ON "registros_asistencia"("sesion_id", "aprendiz_id");
+CREATE UNIQUE INDEX "registros_asistencia_sesion_id_aprendiz_id_key"
+ON "registros_asistencia"("sesion_id", "aprendiz_id");
 
--- CreateIndex
-CREATE UNIQUE INDEX "lecturas_comunicados_comunicado_id_user_id_key" ON "lecturas_comunicados"("comunicado_id", "user_id");
-
--- AddForeignKey
-ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+CREATE UNIQUE INDEX "lecturas_comunicados_comunicado_id_user_id_key"
+ON "lecturas_comunicados"("comunicado_id", "user_id");
 
 -- AddForeignKey
-ALTER TABLE "fichas" ADD CONSTRAINT "fichas_programa_id_fkey" FOREIGN KEY ("programa_id") REFERENCES "programas"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "refresh_tokens"
+ADD CONSTRAINT "refresh_tokens_user_id_fkey"
+FOREIGN KEY ("user_id") REFERENCES "users"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "fichas" ADD CONSTRAINT "fichas_instructor_id_fkey" FOREIGN KEY ("instructor_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "fichas"
+ADD CONSTRAINT "fichas_programa_id_fkey"
+FOREIGN KEY ("programa_id") REFERENCES "programas"("id")
+ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "matriculas" ADD CONSTRAINT "matriculas_ficha_id_fkey" FOREIGN KEY ("ficha_id") REFERENCES "fichas"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "fichas"
+ADD CONSTRAINT "fichas_instructor_id_fkey"
+FOREIGN KEY ("instructor_id") REFERENCES "users"("id")
+ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "matriculas" ADD CONSTRAINT "matriculas_aprendiz_id_fkey" FOREIGN KEY ("aprendiz_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "matriculas"
+ADD CONSTRAINT "matriculas_ficha_id_fkey"
+FOREIGN KEY ("ficha_id") REFERENCES "fichas"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "sesiones_asistencia" ADD CONSTRAINT "sesiones_asistencia_ficha_id_fkey" FOREIGN KEY ("ficha_id") REFERENCES "fichas"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "matriculas"
+ADD CONSTRAINT "matriculas_aprendiz_id_fkey"
+FOREIGN KEY ("aprendiz_id") REFERENCES "users"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "registros_asistencia" ADD CONSTRAINT "registros_asistencia_sesion_id_fkey" FOREIGN KEY ("sesion_id") REFERENCES "sesiones_asistencia"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "sesiones_asistencia"
+ADD CONSTRAINT "sesiones_asistencia_ficha_id_fkey"
+FOREIGN KEY ("ficha_id") REFERENCES "fichas"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "registros_asistencia" ADD CONSTRAINT "registros_asistencia_aprendiz_id_fkey" FOREIGN KEY ("aprendiz_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "registros_asistencia"
+ADD CONSTRAINT "registros_asistencia_sesion_id_fkey"
+FOREIGN KEY ("sesion_id") REFERENCES "sesiones_asistencia"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "competencias" ADD CONSTRAINT "competencias_programa_id_fkey" FOREIGN KEY ("programa_id") REFERENCES "programas"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "registros_asistencia"
+ADD CONSTRAINT "registros_asistencia_aprendiz_id_fkey"
+FOREIGN KEY ("aprendiz_id") REFERENCES "users"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "calificaciones" ADD CONSTRAINT "calificaciones_aprendiz_id_fkey" FOREIGN KEY ("aprendiz_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "competencias"
+ADD CONSTRAINT "competencias_programa_id_fkey"
+FOREIGN KEY ("programa_id") REFERENCES "programas"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "calificaciones" ADD CONSTRAINT "calificaciones_competencia_id_fkey" FOREIGN KEY ("competencia_id") REFERENCES "competencias"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "calificaciones"
+ADD CONSTRAINT "calificaciones_aprendiz_id_fkey"
+FOREIGN KEY ("aprendiz_id") REFERENCES "users"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "calificaciones" ADD CONSTRAINT "calificaciones_instructor_id_fkey" FOREIGN KEY ("instructor_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "calificaciones"
+ADD CONSTRAINT "calificaciones_competencia_id_fkey"
+FOREIGN KEY ("competencia_id") REFERENCES "competencias"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "observaciones" ADD CONSTRAINT "observaciones_aprendiz_id_fkey" FOREIGN KEY ("aprendiz_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "calificaciones"
+ADD CONSTRAINT "calificaciones_instructor_id_fkey"
+FOREIGN KEY ("instructor_id") REFERENCES "users"("id")
+ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "observaciones" ADD CONSTRAINT "observaciones_instructor_id_fkey" FOREIGN KEY ("instructor_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "observaciones"
+ADD CONSTRAINT "observaciones_aprendiz_id_fkey"
+FOREIGN KEY ("aprendiz_id") REFERENCES "users"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "comunicados" ADD CONSTRAINT "comunicados_admin_id_fkey" FOREIGN KEY ("admin_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "observaciones"
+ADD CONSTRAINT "observaciones_instructor_id_fkey"
+FOREIGN KEY ("instructor_id") REFERENCES "users"("id")
+ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "lecturas_comunicados" ADD CONSTRAINT "lecturas_comunicados_comunicado_id_fkey" FOREIGN KEY ("comunicado_id") REFERENCES "comunicados"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "comunicados"
+ADD CONSTRAINT "comunicados_admin_id_fkey"
+FOREIGN KEY ("admin_id") REFERENCES "users"("id")
+ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "lecturas_comunicados" ADD CONSTRAINT "lecturas_comunicados_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "lecturas_comunicados"
+ADD CONSTRAINT "lecturas_comunicados_comunicado_id_fkey"
+FOREIGN KEY ("comunicado_id") REFERENCES "comunicados"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "notificaciones" ADD CONSTRAINT "notificaciones_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "lecturas_comunicados"
+ADD CONSTRAINT "lecturas_comunicados_user_id_fkey"
+FOREIGN KEY ("user_id") REFERENCES "users"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "mensajes" ADD CONSTRAINT "mensajes_sender_id_fkey" FOREIGN KEY ("sender_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "notificaciones"
+ADD CONSTRAINT "notificaciones_user_id_fkey"
+FOREIGN KEY ("user_id") REFERENCES "users"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "mensajes" ADD CONSTRAINT "mensajes_receptor_id_fkey" FOREIGN KEY ("receptor_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "mensajes"
+ADD CONSTRAINT "mensajes_sender_id_fkey"
+FOREIGN KEY ("sender_id") REFERENCES "users"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "horarios" ADD CONSTRAINT "horarios_ficha_id_fkey" FOREIGN KEY ("ficha_id") REFERENCES "fichas"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "mensajes"
+ADD CONSTRAINT "mensajes_receptor_id_fkey"
+FOREIGN KEY ("receptor_id") REFERENCES "users"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "horarios"
+ADD CONSTRAINT "horarios_ficha_id_fkey"
+FOREIGN KEY ("ficha_id") REFERENCES "fichas"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;

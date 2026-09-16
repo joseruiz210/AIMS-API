@@ -61,6 +61,11 @@ const queryUsers = Joi.object({
   order: Joi.string().valid('asc', 'desc').default('desc'),
 });
 
+// El admin solo puede crear cuentas de ADMIN o INSTRUCTOR desde este endpoint.
+// Los aprendices nunca se crean manualmente: se autorregistran y se ubican
+// automáticamente validando su documento contra el roster de la ficha.
+const CREATABLE_ROLES_BY_ADMIN = ['ADMIN', 'INSTRUCTOR'];
+
 const createUser = Joi.object({
   firstName: Joi.string().trim().min(2).max(50).required().messages({
     'string.empty': 'El nombre es obligatorio',
@@ -73,7 +78,10 @@ const createUser = Joi.object({
     'string.email': 'Debe proporcionar un email válido',
   }),
   password: Joi.string().min(8).max(100).optional(),
-  role: Joi.string().valid(...ROLES).optional(),
+  role: Joi.string().valid(...CREATABLE_ROLES_BY_ADMIN).required().messages({
+    'any.only': 'El admin solo puede crear cuentas de ADMIN o INSTRUCTOR; los aprendices se autorregistran',
+    'any.required': 'Debes indicar el rol (ADMIN o INSTRUCTOR)',
+  }),
   phone: Joi.string().trim().allow(null, '').optional(),
   especialidad: Joi.string().trim().allow(null, '').optional(),
 });

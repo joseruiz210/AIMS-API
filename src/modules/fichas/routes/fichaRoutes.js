@@ -207,7 +207,8 @@ router.post('/:id/aprendices', authorize('ADMIN', 'INSTRUCTOR'), validate({ para
  */
 router.delete('/:id/aprendices/:aprendizId', authorize('ADMIN'), validate(fichaValidator.aprendizIdParam), fichaController.removeAprendiz);
 
-router.post('/:id/aprendices/carga', authorize('INSTRUCTOR'), validate(fichaValidator.idParam), uploadLearnersFile, fichaController.importAprendices);
+router.post('/carga', authorize('INSTRUCTOR', 'ADMIN', 'SUPERADMIN'), uploadLearnersFile, fichaController.importAprendicesGeneral);
+router.post('/:id/aprendices/carga', authorize('INSTRUCTOR', 'ADMIN', 'SUPERADMIN'), validate(fichaValidator.idParam), uploadLearnersFile, fichaController.importAprendices);
 
 router.post('/:id/instructores', authorize('ADMIN', 'SUPERADMIN'), validate({ params: fichaValidator.idParam, body: fichaValidator.instructorAssignment }), fichaController.assignInstructor);
 router.patch('/:id/instructor-lider', authorize('ADMIN', 'SUPERADMIN'), validate({ params: fichaValidator.idParam, body: fichaValidator.instructorLeader }), fichaController.setLeader);

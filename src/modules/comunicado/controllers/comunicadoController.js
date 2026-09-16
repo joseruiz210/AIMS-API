@@ -4,12 +4,12 @@ const catchAsync = require('../../../utils/catchAsync');
 
 class ComunicadoController {
   create = catchAsync(async (req, res) => {
-    const comunicado = await comunicadoService.create(req.user.id, req.body);
+    const comunicado = await comunicadoService.create(req.user, req.body);
     return created(res, comunicado, 'Comunicado enviado exitosamente');
   });
 
   getAll = catchAsync(async (req, res) => {
-    const comunicados = await comunicadoService.findAll();
+    const comunicados = await comunicadoService.findAllForUser(req.user);
     return success(res, comunicados, 'Comunicados obtenidos exitosamente');
   });
 

@@ -3,6 +3,7 @@ const evidenciaRepository = require('../repositories/evidenciaRepository');
 const geminiService = require('./geminiService');
 const AppError = require('../../../utils/appError');
 const logAudit = require('../../../utils/auditLogger');
+const pushNotificationService = require('../../notificaciones/services/pushNotificationService');
 
 class EvidenciaService {
   async getAll(query = {}, user) {
@@ -66,6 +67,14 @@ class EvidenciaService {
     });
 
     await logAudit(instructorId, 'CREAR_EVIDENCIA', { evidenciaId: evidencia.id, titulo: evidencia.titulo });
+
+    // Disparar notificación push a los aprendices de la ficha
+    pushNotificationService.notifyFicha(fichaId, {
+      title: 'Nueva Evidencia Asignada',
+      body: `Nueva tarea publicada: "${evidencia.titulo}".`,
+      data: { tipo: 'EVIDENCIA', evidenciaId: evidencia.id, fichaId },
+    }).catch((err) => console.error('[EvidenciaService] Error en notificación push:', err.message));
+
     return evidencia;
   }
 

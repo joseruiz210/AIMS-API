@@ -1,7 +1,6 @@
 const { Router } = require('express');
 const authRoutes = require('./modules/auth/routes/authRoutes');
 const userRoutes = require('./modules/usuarios/routes/userRoutes');
-const adminUserRoutes = require('./modules/usuarios/routes/adminUserRoutes');
 const programaRoutes = require('./modules/programas/routes/programaRoutes');
 const fichaRoutes = require('./modules/fichas/routes/fichaRoutes');
 const matriculaRoutes = require('./modules/matricula/routes/matriculaRoutes');
@@ -25,7 +24,6 @@ const router = Router();
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/admin', panelRoutes);
-router.use('/admin', adminUserRoutes);
 router.use('/programas', programaRoutes);
 router.use('/fichas', fichaRoutes);
 router.use('/matriculas', matriculaRoutes);

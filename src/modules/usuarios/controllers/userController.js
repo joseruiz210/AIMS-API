@@ -8,11 +8,6 @@ class UserController {
     return created(res, user, 'Usuario creado exitosamente');
   });
 
-  createByAdmin = catchAsync(async (req, res) => {
-    const user = await userService.createByAdmin(req.user.id, req.body);
-    return created(res, user, 'Usuario creado exitosamente por el administrador');
-  });
-
   getAll = catchAsync(async (req, res) => {
     const { users, pagination } = await userService.findAll(req.query);
     return paginated(res, users, pagination, 'Usuarios obtenidos exitosamente');
@@ -48,6 +43,12 @@ class UserController {
     const user = await userService.toggleActive(req.params.id);
     const status = user.isActive ? 'activado' : 'desactivado';
     return success(res, user, `Usuario ${status} exitosamente`);
+  });
+
+  updatePushToken = catchAsync(async (req, res) => {
+    const { pushToken } = req.body;
+    const user = await userService.updatePushToken(req.user.id, pushToken || null);
+    return success(res, { pushToken: user.pushToken }, 'Token de notificación actualizado exitosamente');
   });
 }
 

@@ -1,17 +1,52 @@
 const comunicadoRepository = require('../repositories/comunicadoRepository');
+const AppError = require('../../../utils/appError');
 
 class ComunicadoService {
-  async create(adminId, data) {
-    return comunicadoRepository.create({
-      adminId,
-      titulo: data.titulo,
-      mensaje: data.mensaje,
-      destinatario: data.destinatario || 'Todos los usuarios',
-    });
+  // authorUser = { id, role } del usuario autenticado (viene de req.user)
+  async create(authorUser, data) {
+    const { id: autorId, role } = authorUser;
+
+    if (role === 'ADMIN') {
+      // El admin publica avisos globales: nunca lleva fichaId.
+      return comunicadoRepository.create({
+        autorId,
+        fichaId: null,
+        titulo: data.titulo,
+        mensaje: data.mensaje,
+        destinatario: 'Todos los usuarios',
+      });
+    }
+
+    if (role === 'INSTRUCTOR') {
+      // El instructor SIEMPRE debe indicar una ficha, y tiene que ser una
+      // que él mismo dicta — si no, cualquier instructor podría avisarle
+      // a la ficha de otro.
+      if (!data.fichaId) {
+        throw AppError.badRequest('Debes indicar la ficha a la que va dirigido el aviso');
+      }
+
+      const ficha = await comunicadoRepository.fichaPerteneceAInstructor(data.fichaId, autorId);
+      if (!ficha) {
+        throw AppError.forbidden('Solo puedes publicar avisos en fichas que tienes asignadas');
+      }
+
+      return comunicadoRepository.create({
+        autorId,
+        fichaId: ficha.id,
+        titulo: data.titulo,
+        mensaje: data.mensaje,
+        destinatario: `Ficha ${ficha.numero}`,
+      });
+    }
+
+    throw AppError.forbidden('No tienes permisos para publicar avisos');
   }
 
-  async findAll() {
-    return comunicadoRepository.findAll();
+  async findAllForUser(authorUser) {
+    return comunicadoRepository.findVisiblesParaUsuario({
+      role: authorUser.role,
+      userId: authorUser.id,
+    });
   }
 
   async registerLectura(comunicadoId, userId) {

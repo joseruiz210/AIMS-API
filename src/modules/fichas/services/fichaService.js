@@ -21,6 +21,13 @@ const HEADER_ALIASES = {
   lastname: 'apellidos',
   correo: 'correo',
   email: 'correo',
+  ficha: 'ficha',
+  fichanumero: 'ficha',
+  numerodeficha: 'ficha',
+  numeroficha: 'ficha',
+  programa: 'programa',
+  programadeformacion: 'programa',
+  programaformacion: 'programa',
 };
 
 const normalizeHeader = (value) => String(value || '')
@@ -34,9 +41,14 @@ const normalizeValue = (value) => String(value ?? '').trim();
 const parseLearnersFile = (buffer, fileName) => {
   let workbook;
   try {
-    workbook = XLSX.read(buffer, { type: 'buffer', cellDates: false });
+    workbook = XLSX.read(buffer, { type: 'buffer', cellDates: false, codepage: 65001 });
   } catch (_error) {
-    throw AppError.badRequest('El archivo no tiene un formato CSV o Excel válido');
+    try {
+      const textContent = buffer.toString('utf-8');
+      workbook = XLSX.read(textContent, { type: 'string', cellDates: false });
+    } catch (_err) {
+      throw AppError.badRequest('El archivo no tiene un formato CSV o Excel válido');
+    }
   }
 
   const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -44,9 +56,10 @@ const parseLearnersFile = (buffer, fileName) => {
   if (!rows.length) throw AppError.badRequest('El archivo está vacío');
 
   const headers = rows[0].map(normalizeHeader);
-  const columns = headers.map((header) => HEADER_ALIASES[header]);
-  if (columns.some((column) => !column) || new Set(columns).size !== columns.length) {
-    throw AppError.badRequest('El archivo contiene columnas desconocidas o duplicadas');
+  const columns = headers.map((header) => HEADER_ALIASES[header] || header);
+
+  if (new Set(columns).size !== columns.length) {
+    throw AppError.badRequest('El archivo contiene columnas duplicadas');
   }
 
   const missing = REQUIRED_COLUMNS.filter((column) => !columns.includes(column));
@@ -165,10 +178,11 @@ class FichaService {
     await logAudit(userId, 'DESMATRICULAR_APRENDIZ', { fichaId, aprendizId });
   }
 
-  async importAprendices(userId, fichaId, file) {
+  async importAprendices(userId, fichaId, file, currentUser = null) {
     const ficha = await prisma.ficha.findUnique({ where: { id: fichaId }, select: { id: true, instructorId: true } });
     if (!ficha) throw AppError.notFound('Ficha de formación no encontrada');
-    if (ficha.instructorId !== userId) {
+    const isSystemAdmin = currentUser && ['ADMIN', 'SUPERADMIN'].includes(currentUser.role);
+    if (!isSystemAdmin && ficha.instructorId !== userId) {
       let assignment = null;
       try {
         if (prisma.instructorFicha) {
@@ -177,7 +191,7 @@ class FichaService {
       } catch (error) {
         if (error.code !== 'P2021') throw error;
       }
-      if (!assignment) throw AppError.forbidden('Solo un instructor asignado puede cargar aprendices en esta ficha');
+      if (!assignment) throw AppError.forbidden('Solo un instructor asignado o administrador puede cargar aprendices en esta ficha');
     }
     if (!file) throw AppError.badRequest('Debes adjuntar un archivo en el campo archivo');
 
@@ -222,7 +236,11 @@ class FichaService {
             isPreRegistered: true,
           },
         });
-        await tx.matricula.create({ data: { fichaId, aprendizId: user.id } });
+        await tx.matricula.upsert({
+          where: { fichaId_aprendizId: { fichaId, aprendizId: user.id } },
+          create: { fichaId, aprendizId: user.id },
+          update: {},
+        });
         created.push(user.id);
       }
 
@@ -230,9 +248,111 @@ class FichaService {
         data: { fichaId, uploadedById: userId, fileName, totalRows: learners.length, createdRows: created.length },
         select: { id: true, fileName: true, totalRows: true, createdRows: true, uploadedById: true, createdAt: true },
       });
-    });
+    }, { maxWait: 15000, timeout: 60000 });
 
     await logAudit(userId, 'CARGAR_APRENDICES_FICHA', { fichaId, cargaId: result.id, totalRows: result.totalRows });
+    return result;
+  }
+
+  async importAprendicesGeneral(userId, file, currentUser = null) {
+    if (!file) throw AppError.badRequest('Debes adjuntar un archivo en el campo archivo');
+
+    const { fileName, learners } = parseLearnersFile(file.buffer, file.originalname);
+    validateLearners(learners);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const createdUserIds = [];
+      const fichaMap = new Map();
+      const programaMap = new Map();
+
+      // Pre-cargar fichas y programas existentes
+      const existingFichas = await tx.ficha.findMany({ select: { id: true, numero: true } });
+      existingFichas.forEach((f) => fichaMap.set(f.numero, f.id));
+
+      const existingProgramas = await tx.programa.findMany({ select: { id: true, nombre: true } });
+      existingProgramas.forEach((p) => programaMap.set(p.nombre.toLowerCase(), p.id));
+
+      // Pre-cargar usuarios existentes
+      const emails = learners.map((l) => l.correo.toLowerCase());
+      const existingUsers = await tx.user.findMany({
+        where: { email: { in: emails } },
+        select: { id: true, email: true },
+      });
+      const userMap = new Map(existingUsers.map((u) => [u.email.toLowerCase(), u]));
+
+      for (const learner of learners) {
+        let currentFichaId;
+
+        if (learner.ficha) {
+          const fichaNum = String(learner.ficha).trim();
+          if (fichaMap.has(fichaNum)) {
+            currentFichaId = fichaMap.get(fichaNum);
+          } else {
+            const progName = learner.programa || 'Programa de Formación';
+            const progKey = progName.toLowerCase();
+            let progId = programaMap.get(progKey);
+
+            if (!progId) {
+              const progObj = await tx.programa.create({
+                data: {
+                  nombre: progName,
+                  codigo: `PROG-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                },
+              });
+              progId = progObj.id;
+              programaMap.set(progKey, progId);
+            }
+
+            const fichaObj = await tx.ficha.create({
+              data: {
+                numero: fichaNum,
+                programaId: progId,
+                instructorId: currentUser?.role === 'INSTRUCTOR' ? userId : null,
+              },
+            });
+            currentFichaId = fichaObj.id;
+            fichaMap.set(fichaNum, currentFichaId);
+          }
+        } else {
+          throw AppError.badRequest(`Fila ${learner.rowNumber}: se requiere indicar la ficha o cargar desde una ficha específica`);
+        }
+
+        const email = learner.correo.toLowerCase();
+        let user = userMap.get(email);
+        if (!user) {
+          user = await tx.user.create({
+            data: {
+              firstName: learner.nombres,
+              lastName: learner.apellidos,
+              email,
+              password: null,
+              role: 'APRENDIZ',
+              documentType: learner.tipoDocumento.toUpperCase(),
+              documentNumber: learner.numeroDocumento,
+              isPreRegistered: true,
+            },
+          });
+          userMap.set(email, user);
+        }
+
+        await tx.matricula.upsert({
+          where: { fichaId_aprendizId: { fichaId: currentFichaId, aprendizId: user.id } },
+          create: { fichaId: currentFichaId, aprendizId: user.id },
+          update: {},
+        });
+
+        createdUserIds.push(user.id);
+      }
+
+      return {
+        fileName,
+        totalRows: learners.length,
+        createdRows: createdUserIds.length,
+        message: 'Fichas y aprendices procesados exitosamente desde el archivo',
+      };
+    }, { maxWait: 15000, timeout: 60000 });
+
+    await logAudit(userId, 'CARGAR_APRENDICES_GENERAL', { fileName: result.fileName, totalRows: result.totalRows });
     return result;
   }
 

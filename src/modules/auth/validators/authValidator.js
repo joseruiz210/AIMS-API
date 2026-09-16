@@ -26,8 +26,13 @@ const registerSchema = Joi.object({
   role: Joi.string().valid('INSTRUCTOR', 'APRENDIZ').optional(),
   documentType: Joi.string().trim().max(20).optional(),
   documentNumber: Joi.string().trim().max(40).optional(),
-  programaId: Joi.string().uuid().optional(),
-  fichaId: Joi.string().uuid().optional(),
+  programaId: Joi.string().trim().allow(null, '').optional(),
+  programa: Joi.string().trim().allow(null, '').optional(),
+  fichaId: Joi.string().trim().allow(null, '').optional(),
+  ficha: Joi.string().trim().allow(null, '').optional(),
+  fichaNumero: Joi.string().trim().allow(null, '').optional(),
+  sede: Joi.string().trim().allow(null, '').optional(),
+  trimestre: Joi.number().integer().min(1).max(12).optional(),
 });
 
 const loginSchema = Joi.object({

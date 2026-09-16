@@ -51,7 +51,6 @@ class UserService {
 
     return user;
   }
-
   async findAll(queryParams) {
     const {
       page = 1,
@@ -155,6 +154,11 @@ class UserService {
 
   async getProfile(userId) {
     return this.findById(userId);
+  }
+
+  async updatePushToken(userId, pushToken) {
+    await this.findById(userId);
+    return userRepository.updatePushToken(userId, pushToken);
   }
 }
 

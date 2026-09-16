@@ -4,9 +4,9 @@ const app = require('../../src/app');
 const env = require('../../src/config/env');
 
 // Mock user repository to isolate integration tests from database dependencies
-jest.mock('../../src/repositories/user.repository');
+jest.mock('../../src/modules/usuarios/repositories/userRepository');
 
-const userRepository = require('../../src/repositories/user.repository');
+const userRepository = require('../../src/modules/usuarios/repositories/userRepository');
 
 describe('Users CRUD & Authorization Integration Tests', () => {
   const adminUser = {
@@ -363,6 +363,48 @@ describe('Users CRUD & Authorization Integration Tests', () => {
       const res = await request(app)
         .delete(`/api/v1/users/${aprendizUser.id}`)
         .set('Authorization', `Bearer ${instructorToken}`);
+
+      expect(res.status).toBe(403);
+    });
+  });
+
+  // ─── 7. CREATE USER (ADMIN ONLY) ──────────────────────────────────────────
+  describe('POST /api/v1/users', () => {
+    test('should allow ADMIN to create a user directly (201)', async () => {
+      userRepository.existsByEmail.mockResolvedValue(false);
+      userRepository.create.mockResolvedValue({
+        id: 'new-user-uuid',
+        firstName: 'Valentina',
+        lastName: 'Torres',
+        email: 'v.torres@sena.edu.co',
+        role: 'INSTRUCTOR',
+        isActive: true,
+      });
+
+      const res = await request(app)
+        .post('/api/v1/users')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          firstName: 'Valentina',
+          lastName: 'Torres',
+          email: 'v.torres@sena.edu.co',
+          role: 'INSTRUCTOR',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.role).toBe('INSTRUCTOR');
+    });
+
+    test('should deny user creation to APRENDIZ (403)', async () => {
+      const res = await request(app)
+        .post('/api/v1/users')
+        .set('Authorization', `Bearer ${aprendizToken}`)
+        .send({
+          firstName: 'Valentina',
+          lastName: 'Torres',
+          email: 'v.torres@sena.edu.co',
+        });
 
       expect(res.status).toBe(403);
     });

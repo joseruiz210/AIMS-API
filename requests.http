@@ -1,10 +1,10 @@
-### AIMS API - Users Module - Ejemplos de Peticiones
-### Puedes usar este archivo con la extensión REST Client de VS Code
-### o importarlo en Postman/Insomnia
+### AIMS API - Ejemplos de Peticiones HTTP
+### Puedes usar este archivo con la extensión REST Client de VS Code o importarlo en Postman/Insomnia
 
 @baseUrl = http://localhost:3000/api/v1
 @adminToken = REEMPLAZAR_CON_TOKEN_ADMIN
-@userToken = REEMPLAZAR_CON_TOKEN_USUARIO
+@instructorToken = REEMPLAZAR_CON_TOKEN_INSTRUCTOR
+@userToken = REEMPLAZAR_CON_TOKEN_APRENDIZ
 
 # ─────────────────────────────────────────────
 # HEALTH CHECK
@@ -15,10 +15,10 @@ GET http://localhost:3000/api/health
 
 
 # ─────────────────────────────────────────────
-# AUTH - REGISTRO E INICIO DE SESIÓN
+# AUTHENTICATION
 # ─────────────────────────────────────────────
 
-### 1. Registrar Aprendiz con correo @soy.sena.edu.co (Asigna rol APRENDIZ)
+### 1. Registrar Aprendiz (correo @soy.sena.edu.co o @gmail.com)
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
@@ -30,23 +30,7 @@ Content-Type: application/json
   "phone": "+57 300 123 4567"
 }
 
-###
-
-### 2. Registrar Aprendiz con correo @gmail.com (Asigna rol APRENDIZ)
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "firstName": "Juan",
-  "lastName": "Pérez",
-  "email": "juan.perez@gmail.com",
-  "password": "MiPassword123",
-  "phone": "+57 300 123 4567"
-}
-
-###
-
-### 3. Registrar Instructor con correo @sena.edu.co (Asigna rol INSTRUCTOR)
+### 2. Registrar Instructor (correo @sena.edu.co)
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
@@ -58,317 +42,230 @@ Content-Type: application/json
   "phone": "+57 310 987 6543"
 }
 
-###
-
-### 4. Intento de registro con dominio no permitido (retorna 400 Bad Request)
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "firstName": "Pedro",
-  "lastName": "Gómez",
-  "email": "pedro.gomez@hotmail.com",
-  "password": "Password123"
-}
-
-###
-
-### 5. Intento malicioso de registrarse como ADMIN (Ignora role y asigna APRENDIZ por dominio)
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "firstName": "Admin",
-  "lastName": "Hacker",
-  "email": "hacker@gmail.com",
-  "password": "Admin1234Password",
-  "role": "ADMIN"
-}
-
-###
-
-### 4. Login como Admin (guarda el token en @adminToken)
+### 3. Login
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "admin@aims.com",
-  "password": "Admin1234"
+  "email": "carlos.rodriguez@sena.edu.co",
+  "password": "Instructor123"
 }
 
-###
-
-### 5. Login como Usuario normal
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "email": "maria.garcia@email.com",
-  "password": "MiPassword123"
-}
-
-###
-
-### 6. Login - Email inválido (debe retornar 400)
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "email": "no-es-un-email",
-  "password": "MiPassword123"
-}
-
-###
-
-### 7. Login - Credenciales incorrectas (debe retornar 401)
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "email": "admin@aims.com",
-  "password": "ContraseñaIncorrecta1"
-}
-
-
-# ─────────────────────────────────────────────
-# AUTH - VERIFICACIÓN DE CORREO Y RECUPERACIÓN DE CONTRASEÑA
-# ─────────────────────────────────────────────
-
-### 8. Solicitar recuperación de contraseña
-POST {{baseUrl}}/auth/forgot-password
-Content-Type: application/json
-
-{
-  "email": "maria.garcia@email.com"
-}
-
-###
-
-### 9. Validar token de recuperación de contraseña
-POST {{baseUrl}}/auth/validate-reset-token
-Content-Type: application/json
-
-{
-  "token": "REEMPLAZAR_CON_TOKEN_DE_CORREO"
-}
-
-###
-
-### 10. Restablecer contraseña con token
-POST {{baseUrl}}/auth/reset-password
-Content-Type: application/json
-
-{
-  "token": "REEMPLAZAR_CON_TOKEN_DE_CORREO",
-  "newPassword": "NuevaPassword123"
-}
-
-###
-
-### 11. Verificar correo con token
-POST {{baseUrl}}/auth/verify-email
-Content-Type: application/json
-
-{
-  "token": "REEMPLAZAR_CON_TOKEN_DE_VERIFICACION"
-}
-
-###
-
-### 12. Reenviar correo de verificación
-POST {{baseUrl}}/auth/resend-verification
-Content-Type: application/json
-
-{
-  "email": "maria.garcia@email.com"
-}
-
-
-# ─────────────────────────────────────────────
-# PERFIL - USUARIO AUTENTICADO
-# ─────────────────────────────────────────────
-
-### 8. Obtener mi perfil
-GET {{baseUrl}}/users/profile
+### 4. Obtener usuario autenticado
+GET {{baseUrl}}/auth/me
 Authorization: Bearer {{userToken}}
 
-###
 
-### 9. Actualizar mi perfil
-PUT {{baseUrl}}/users/profile
+# ─────────────────────────────────────────────
+# PROGRAMAS
+# ─────────────────────────────────────────────
+
+### Listar programas
+GET {{baseUrl}}/programas
 Authorization: Bearer {{userToken}}
+
+### Crear programa (ADMIN)
+POST {{baseUrl}}/programas
+Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
-  "firstName": "María José",
-  "phone": "+57 320 111 2222"
+  "nombre": "Análisis y Desarrollo de Software",
+  "codigo": "228106",
+  "duracionMeses": 24
 }
 
-###
-
-### 10. Cambiar contraseña
-PATCH {{baseUrl}}/users/change-password
+### Obtener programa por ID
+GET {{baseUrl}}/programas/REEMPLAZAR_CON_PROGRAMA_ID
 Authorization: Bearer {{userToken}}
+
+
+# ─────────────────────────────────────────────
+# MÓDULOS / COMPETENCIAS
+# ─────────────────────────────────────────────
+
+### Listar módulos de formación
+GET {{baseUrl}}/modulos
+Authorization: Bearer {{userToken}}
+
+### Crear módulo de formación (ADMIN / INSTRUCTOR)
+POST {{baseUrl}}/modulos
+Authorization: Bearer {{instructorToken}}
 Content-Type: application/json
 
 {
-  "currentPassword": "MiPassword123",
-  "newPassword": "NuevaPassword456"
-}
-
-###
-
-### 11. Cambiar contraseña - actual incorrecta (debe retornar 400)
-PATCH {{baseUrl}}/users/change-password
-Authorization: Bearer {{userToken}}
-Content-Type: application/json
-
-{
-  "currentPassword": "ContraseñaMal1",
-  "newPassword": "NuevaPassword456"
-}
-
-###
-
-### 12. Cambiar contraseña - nueva sin mayúscula (debe retornar 400)
-PATCH {{baseUrl}}/users/change-password
-Authorization: Bearer {{userToken}}
-Content-Type: application/json
-
-{
-  "currentPassword": "MiPassword123",
-  "newPassword": "soloMinusculas123"
+  "nombre": "Programación Orientada a Objetos",
+  "horasFormacion": 120,
+  "programaId": "REEMPLAZAR_CON_PROGRAMA_ID"
 }
 
 
 # ─────────────────────────────────────────────
-# ADMIN - GESTIÓN DE USUARIOS
+# FICHAS
 # ─────────────────────────────────────────────
 
-### 13. Listar todos los usuarios (requiere ADMIN)
-GET {{baseUrl}}/users
-Authorization: Bearer {{adminToken}}
-
-###
-
-### 14. Listar usuarios con paginación
-GET {{baseUrl}}/users?page=1&limit=5
-Authorization: Bearer {{adminToken}}
-
-###
-
-### 15. Filtrar por rol
-GET {{baseUrl}}/users?role=APRENDIZ
-Authorization: Bearer {{adminToken}}
-
-###
-
-### 16. Filtrar usuarios activos
-GET {{baseUrl}}/users?isActive=true
-Authorization: Bearer {{adminToken}}
-
-###
-
-### 17. Buscar por nombre/email
-GET {{baseUrl}}/users?search=maria
-Authorization: Bearer {{adminToken}}
-
-###
-
-### 18. Ordenar por nombre ascendente
-GET {{baseUrl}}/users?sortBy=firstName&order=asc
-Authorization: Bearer {{adminToken}}
-
-###
-
-### 19. Combinación de filtros
-GET {{baseUrl}}/users?role=INSTRUCTOR&isActive=true&page=1&limit=10&sortBy=lastName&order=asc
-Authorization: Bearer {{adminToken}}
-
-###
-
-### 20. Obtener usuario por ID (reemplaza el UUID)
-GET {{baseUrl}}/users/REEMPLAZAR_CON_UUID
-Authorization: Bearer {{adminToken}}
-
-###
-
-### 21. Obtener usuario - ID inválido (debe retornar 400)
-GET {{baseUrl}}/users/no-es-un-uuid
-Authorization: Bearer {{adminToken}}
-
-###
-
-### 22. Actualizar usuario como Admin
-PUT {{baseUrl}}/users/REEMPLAZAR_CON_UUID
-Authorization: Bearer {{adminToken}}
-Content-Type: application/json
-
-{
-  "role": "INSTRUCTOR",
-  "isActive": true,
-  "phone": "+57 300 999 8888"
-}
-
-###
-
-### 23. Activar/Desactivar usuario
-PATCH {{baseUrl}}/users/REEMPLAZAR_CON_UUID/toggle-active
-Authorization: Bearer {{adminToken}}
-
-###
-
-### 24. Eliminar usuario
-DELETE {{baseUrl}}/users/REEMPLAZAR_CON_UUID
-Authorization: Bearer {{adminToken}}
-
-###
-
-### 25. Eliminar usuario - ID no existente (debe retornar 404)
-DELETE {{baseUrl}}/users/00000000-0000-0000-0000-000000000000
-Authorization: Bearer {{adminToken}}
-
-
-# ─────────────────────────────────────────────
-# VALIDACIONES Y CASOS DE ERROR
-# ─────────────────────────────────────────────
-
-### 26. Registro - Email duplicado (debe retornar 409)
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "firstName": "Duplicado",
-  "lastName": "Test",
-  "email": "admin@aims.com",
-  "password": "Test1234"
-}
-
-###
-
-### 27. Registro - Contraseña débil (debe retornar 400)
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "firstName": "Test",
-  "lastName": "Usuario",
-  "email": "test@email.com",
-  "password": "debil"
-}
-
-###
-
-### 28. Listar usuarios sin token (debe retornar 401)
-GET {{baseUrl}}/users
-
-###
-
-### 29. Listar usuarios con token de Aprendiz (debe retornar 403)
-GET {{baseUrl}}/users
+### Listar fichas
+GET {{baseUrl}}/fichas
 Authorization: Bearer {{userToken}}
 
-###
+### Crear ficha (ADMIN / INSTRUCTOR)
+POST {{baseUrl}}/fichas
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
 
-### 30. Ruta inexistente (debe retornar 404)
-GET http://localhost:3000/api/v1/ruta-que-no-existe
+{
+  "numero": "2670145",
+  "jornada": "MANANA",
+  "fechaInicio": "2026-01-15T00:00:00.000Z",
+  "programaId": "REEMPLAZAR_CON_PROGRAMA_ID"
+}
+
+### Asignar aprendiz a ficha
+POST {{baseUrl}}/fichas/REEMPLAZAR_CON_FICHA_ID/aprendices
+Authorization: Bearer {{instructorToken}}
+Content-Type: application/json
+
+{
+  "aprendizId": "REEMPLAZAR_CON_APRENDIZ_ID"
+}
+
+
+# ─────────────────────────────────────────────
+# HORARIOS
+# ─────────────────────────────────────────────
+
+### Ver mi horario (APRENDIZ)
+GET {{baseUrl}}/horarios/mi-horario
+Authorization: Bearer {{userToken}}
+
+### Crear horario de formación (INSTRUCTOR / ADMIN)
+POST {{baseUrl}}/horarios
+Authorization: Bearer {{instructorToken}}
+Content-Type: application/json
+
+{
+  "fichaId": "REEMPLAZAR_CON_FICHA_ID",
+  "diaSemana": 1,
+  "horaInicio": "07:00",
+  "horaFin": "12:00",
+  "ambiente": "Ambiente 204",
+  "tema": "Programación Orientada a Objetos"
+}
+
+
+# ─────────────────────────────────────────────
+# ASISTENCIA
+# ─────────────────────────────────────────────
+
+### Ver mis asistencias (APRENDIZ)
+GET {{baseUrl}}/asistencia/mis-asistencias
+Authorization: Bearer {{userToken}}
+
+### Registrar asistencias de sesión (INSTRUCTOR)
+POST {{baseUrl}}/asistencia/registrar
+Authorization: Bearer {{instructorToken}}
+Content-Type: application/json
+
+{
+  "registros": [
+    {
+      "fichaAprendizId": "REEMPLAZAR_CON_FICHA_APRENDIZ_ID",
+      "horarioId": "REEMPLAZAR_CON_HORARIO_ID",
+      "fecha": "2026-08-26",
+      "estado": "PRESENTE",
+      "observacion": "Llegó puntual"
+    }
+  ]
+}
+
+
+# ─────────────────────────────────────────────
+# CALIFICACIONES
+# ─────────────────────────────────────────────
+
+### Ver mis calificaciones (APRENDIZ)
+GET {{baseUrl}}/calificaciones/mis-calificaciones
+Authorization: Bearer {{userToken}}
+
+### Registrar / Actualizar calificación (INSTRUCTOR)
+POST {{baseUrl}}/calificaciones
+Authorization: Bearer {{instructorToken}}
+Content-Type: application/json
+
+{
+  "aprendizId": "REEMPLAZAR_CON_APRENDIZ_ID",
+  "fichaId": "REEMPLAZAR_CON_FICHA_ID",
+  "moduloId": "REEMPLAZAR_CON_MODULO_ID",
+  "nota": 4.5,
+  "periodo": "2026-1"
+}
+
+
+# ─────────────────────────────────────────────
+# EVIDENCIAS Y ENTREGAS
+# ─────────────────────────────────────────────
+
+### Listar evidencias
+GET {{baseUrl}}/evidencias
+Authorization: Bearer {{userToken}}
+
+### Crear evidencia (INSTRUCTOR)
+POST {{baseUrl}}/evidencias
+Authorization: Bearer {{instructorToken}}
+Content-Type: application/json
+
+{
+  "titulo": "Taller Diagrama Entidad Relación",
+  "descripcion": "Diseñar el DER completo para la base de datos del proyecto AIMS",
+  "fechaLimite": "2026-09-05T23:59:59.000Z",
+  "fichaId": "REEMPLAZAR_CON_FICHA_ID"
+}
+
+### Enviar entrega de evidencia (APRENDIZ)
+POST {{baseUrl}}/evidencias/REEMPLAZAR_CON_EVIDENCIA_ID/entregas
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "archivoUrl": "https://storage.sena.edu.co/entregas/der_taller.pdf",
+  "comentario": "Adjunto documento en PDF con el diseño DER"
+}
+
+### Calificar entrega (INSTRUCTOR)
+PUT {{baseUrl}}/evidencias/REEMPLAZAR_CON_EVIDENCIA_ID/entregas/REEMPLAZAR_CON_ENTREGA_ID/calificar
+Authorization: Bearer {{instructorToken}}
+Content-Type: application/json
+
+{
+  "nota": 4.8
+}
+
+
+# ─────────────────────────────────────────────
+# APRENDIZ DASHBOARD & NOTIFICACIONES
+# ─────────────────────────────────────────────
+
+### Obtener Dashboard del Aprendiz
+GET {{baseUrl}}/aprendiz/dashboard
+Authorization: Bearer {{userToken}}
+
+### Obtener Notificaciones
+GET {{baseUrl}}/notificaciones
+Authorization: Bearer {{userToken}}
+
+### Marcar todas las notificaciones como leídas
+PATCH {{baseUrl}}/notificaciones/read-all
+Authorization: Bearer {{userToken}}
+
+
+# ─────────────────────────────────────────────
+# ADMIN STATS & AUDIT LOGS
+# ─────────────────────────────────────────────
+
+### Obtener Estadísticas del Panel Admin
+GET {{baseUrl}}/admin/stats
+Authorization: Bearer {{adminToken}}
+
+### Obtener Actividad Reciente / Logs de Auditoría
+GET {{baseUrl}}/admin/recent-activity
+Authorization: Bearer {{adminToken}}

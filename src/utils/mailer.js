@@ -45,6 +45,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
     return { success: false, error: error.message };
   }
 };
+
 /**
  * Sends verification email to user
  */
@@ -94,10 +95,28 @@ const sendPasswordResetEmail = async (email, token) => {
   });
 };
 
-module.exports = {
-  sendEmail,
-  sendVerificationEmail,
-  sendPasswordResetEmail,
+/**
+ * Sends magic link email for passwordless login
+ */
+const sendMagicLinkEmail = async (email, token) => {
+  const magicUrl = `${env.frontendUrl}/magic-verify?token=${token}`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; padding: 20px;">
+      <h2>Acceso Directo (Magic Link) - AIMS</h2>
+      <p>Haz clic en el siguiente botón para iniciar sesión automáticamente sin contraseña:</p>
+      <a href="${magicUrl}" style="background-color: #D4AF37; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Ingresar a AIMS</a>
+      <p style="margin-top: 20px;">O copia y pega este token en la aplicación:</p>
+      <code style="background-color: #f4f4f4; padding: 5px 10px; border-radius: 3px;">${token}</code>
+      <p style="color: #666; font-size: 12px; margin-top: 30px;">Si no solicitaste este acceso, puedes ignorar este correo.</p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: 'Acceso Directo sin Contraseña - AIMS',
+    html,
+    text: `Accede a AIMS usando este token: ${token} o ingresando a: ${magicUrl}`,
+  });
 };
 
 if (transporter) {
@@ -116,4 +135,5 @@ module.exports = {
   sendEmail,
   sendVerificationEmail,
   sendPasswordResetEmail,
+  sendMagicLinkEmail,
 };

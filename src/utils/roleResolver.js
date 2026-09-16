@@ -22,7 +22,7 @@ const resolveRoleFromEmail = (email) => {
 
   const domain = parts[1].toLowerCase();
 
-  if (domain === 'soy.sena.edu.co') {
+  if (domain === 'soy.sena.edu.co' || domain === 'misena.edu.co') {
     return 'APRENDIZ';
   } else if (domain === 'sena.edu.co') {
     return 'INSTRUCTOR';
@@ -36,4 +36,3 @@ const resolveRoleFromEmail = (email) => {
 module.exports = {
   resolveRoleFromEmail,
 };
-git

@@ -17,15 +17,16 @@ jest.mock('../../src/middlewares/rateLimiter', () => ({
   authLimiter: (req, res, next) => next(),
   apiLimiter: (req, res, next) => next(),
 }));
-jest.mock('../../src/repositories/user.repository');
-jest.mock('../../src/repositories/auth.repository');
+jest.mock('../../src/modules/usuarios/repositories/userRepository');
+jest.mock('../../src/modules/auth/repositories/authRepository');
 jest.mock('../../src/utils/mailer', () => ({
   sendVerificationEmail: jest.fn().mockResolvedValue(true),
   sendPasswordResetEmail: jest.fn().mockResolvedValue(true),
+  sendMagicLinkEmail: jest.fn().mockResolvedValue(true),
 }));
 
-const userRepository = require('../../src/repositories/user.repository');
-const authRepository = require('../../src/repositories/auth.repository');
+const userRepository = require('../../src/modules/usuarios/repositories/userRepository');
+const authRepository = require('../../src/modules/auth/repositories/authRepository');
 
 describe('Auth Module Complete Integration Tests', () => {
   const mockUser = {
@@ -395,6 +396,56 @@ describe('Auth Module Complete Integration Tests', () => {
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
+    });
+  });
+
+  // ─── 11. MAGIC LINK & GOOGLE LOGIN ──────────────────────────────────────────
+  describe('POST /api/v1/auth/magic-link', () => {
+    test('should request magic link email successfully', async () => {
+      userRepository.findByEmail.mockResolvedValue(mockUser);
+      authRepository.saveMagicLinkToken.mockResolvedValue(true);
+
+      const res = await request(app)
+        .post('/api/v1/auth/magic-link')
+        .send({ email: 'juan.perez@soy.sena.edu.co' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.message).toContain('recibirás un enlace');
+    });
+
+    test('should verify magic link token successfully', async () => {
+      authRepository.findUserByMagicLinkToken.mockResolvedValue(mockUser);
+      authRepository.clearMagicLinkToken.mockResolvedValue(true);
+      authRepository.createRefreshToken.mockResolvedValue({ token: 'mock-refresh' });
+
+      const res = await request(app)
+        .post('/api/v1/auth/magic-link/verify')
+        .send({ token: 'valid-magic-token' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.accessToken).toBeDefined();
+    });
+  });
+
+  describe('POST /api/v1/auth/google', () => {
+    test('should login or register user via google OAuth token', async () => {
+      userRepository.findByEmail.mockResolvedValue(mockUser);
+      authRepository.createRefreshToken.mockResolvedValue({ token: 'mock-refresh' });
+
+      const mockGoogleJwt = jwt.sign(
+        { email: 'juan.perez@soy.sena.edu.co', given_name: 'Juan', family_name: 'Pérez', sub: 'google-1234' },
+        'secret'
+      );
+
+      const res = await request(app)
+        .post('/api/v1/auth/google')
+        .send({ idToken: mockGoogleJwt });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.accessToken).toBeDefined();
     });
   });
 });

@@ -19,6 +19,20 @@ const errorHandler = (err, req, res, _next) => {
     message = 'Registro no encontrado';
   }
 
+  // Database connectivity & DNS issues
+  if (
+    (err.message && (err.message.includes('EAI_AGAIN') || err.message.includes('Can\'t reach database server') || err.message.includes('ETIMEDOUT') || err.message.includes('ECONNREFUSED'))) ||
+    err.code === 'P1001'
+  ) {
+    statusCode = 503;
+    message = 'La base de datos está restableciendo conexión. Por favor reintenta en un momento.';
+  } else if (err.name?.includes('Prisma') || (typeof err.message === 'string' && err.message.includes('prisma.'))) {
+    if (!err.isJoi && !err.statusCode) {
+      statusCode = 500;
+      message = 'Ocurrió un error al procesar la operación en la base de datos.';
+    }
+  }
+
   // JWT errors
   if (err.name === 'JsonWebTokenError') {
     statusCode = 401;

@@ -1,0 +1,44 @@
+const { Router } = require('express');
+const authRoutes = require('./modules/auth/routes/authRoutes');
+const userRoutes = require('./modules/usuarios/routes/userRoutes');
+const programaRoutes = require('./modules/programas/routes/programaRoutes');
+const fichaRoutes = require('./modules/fichas/routes/fichaRoutes');
+const matriculaRoutes = require('./modules/matricula/routes/matriculaRoutes');
+const asistenciaRoutes = require('./modules/asistencia/routes/asistenciaRoutes');
+const calificacionRoutes = require('./modules/calificaciones/routes/calificacionRoutes');
+const observacionRoutes = require('./modules/observacion/routes/observacionRoutes');
+const comunicadoRoutes = require('./modules/comunicado/routes/comunicadoRoutes');
+const notificacionRoutes = require('./modules/notificaciones/routes/notificacionRoutes');
+const mensajeRoutes = require('./modules/mensaje/routes/mensajeRoutes');
+const horarioRoutes = require('./modules/horarios/routes/horarioRoutes');
+const configuracionRoutes = require('./modules/configuracion/routes/configuracionRoutes');
+const reportesRoutes = require('./modules/reportes/routes/reportesRoutes');
+const documentosRoutes = require('./modules/documentos/routes/documentosRoutes');
+const dashboardRoutes = require('./modules/dashboard/routes/dashboardRoutes');
+const panelRoutes = require('./modules/reportes/routes/panelRoutes');
+const moduloRoutes = require('./modules/modulos/routes/moduloRoutes');
+const evidenciaRoutes = require('./modules/evidencias/routes/evidenciaRoutes');
+
+const router = Router();
+
+router.use('/auth', authRoutes);
+router.use('/users', userRoutes);
+router.use('/admin', panelRoutes);
+router.use('/programas', programaRoutes);
+router.use('/fichas', fichaRoutes);
+router.use('/matriculas', matriculaRoutes);
+router.use('/asistencia', asistenciaRoutes);
+router.use('/calificaciones', calificacionRoutes);
+router.use('/observaciones', observacionRoutes);
+router.use('/comunicados', comunicadoRoutes);
+router.use('/notificaciones', notificacionRoutes);
+router.use('/mensajes', mensajeRoutes);
+router.use('/horarios', horarioRoutes);
+router.use('/configuracion', configuracionRoutes);
+router.use('/reportes', reportesRoutes);
+router.use('/documentos', documentosRoutes);
+router.use('/aprendiz', dashboardRoutes);
+router.use('/modulos', moduloRoutes);
+router.use('/evidencias', evidenciaRoutes);
+
+module.exports = router;

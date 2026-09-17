@@ -26,43 +26,40 @@ class AuthService {
       const fichaParam = (userData.fichaId || userData.ficha || userData.fichaNumero || '').trim();
       const programaParam = (userData.programaId || userData.programa || '').trim();
 
-      if (!docType || !docNum || !fichaParam || !programaParam) {
-        throw AppError.badRequest('Para registrarte como aprendiz debes indicar documento, programa y ficha');
+      if (!docType || !docNum) {
+        throw AppError.badRequest('Para registrarte como aprendiz debes indicar tipo y número de documento');
       }
 
-      // Buscar la ficha por ID o por número de ficha
-      const fichaObj = await prisma.ficha.findFirst({
-        where: {
-          OR: [
-            { id: fichaParam },
-            { numero: fichaParam },
-          ],
-        },
-        include: { programa: true },
-      });
-
-      if (!fichaObj) {
-        throw AppError.badRequest('La ficha especificada no existe en el sistema');
-      }
-
-      // Buscar el usuario precargado
-      preRegisteredUser = await prisma.user.findFirst({
-        where: {
-          email,
-          role: 'APRENDIZ',
-          documentType: docType,
-          documentNumber: docNum,
-          isPreRegistered: true,
-          matriculas: {
-            some: {
-              fichaId: fichaObj.id,
-            },
+      let fichaObj = null;
+      if (fichaParam) {
+        // Buscar la ficha por ID o por número de ficha
+        fichaObj = await prisma.ficha.findFirst({
+          where: {
+            OR: [
+              { id: fichaParam },
+              { numero: fichaParam },
+            ],
           },
-        },
-      });
+          include: { programa: true },
+        });
 
-      if (!preRegisteredUser) {
-        throw AppError.badRequest('Los datos no coinciden con un aprendiz precargado en la ficha');
+        if (fichaObj) {
+          // Buscar el usuario precargado
+          preRegisteredUser = await prisma.user.findFirst({
+            where: {
+              email,
+              role: 'APRENDIZ',
+              documentType: docType,
+              documentNumber: docNum,
+              isPreRegistered: true,
+              matriculas: {
+                some: {
+                  fichaId: fichaObj.id,
+                },
+              },
+            },
+          });
+        }
       }
     }
 

@@ -4,6 +4,7 @@ const AppError = require('../../../utils/appError');
 const logAudit = require('../../../utils/auditLogger');
 const prisma = require('../../../config/database');
 const XLSX = require('xlsx');
+const { uploadBuffer } = require('../../../utils/fileStorage');
 
 const REQUIRED_COLUMNS = ['tipoDocumento', 'numeroDocumento', 'nombres', 'apellidos', 'correo'];
 const HEADER_ALIASES = {
@@ -521,6 +522,25 @@ class FichaService {
         message: 'Fichas y aprendices procesados exitosamente desde el archivo',
       };
     }, { maxWait: 15000, timeout: 60000 });
+
+    try {
+  const up = await uploadBuffer(file.buffer, {
+    folder: 'cargas',
+    originalName: file.originalname,
+    mimeType: file.mimetype,
+  });
+  await prisma.cargaAprendices.create({
+    data: {
+      uploadedById: userId,
+      fileName: result.fileName,
+      totalRows: result.totalRows,
+      createdRows: result.createdRows,
+      fileKey: up.key,
+    },
+  });
+} catch (err) {
+  console.error('No se pudo respaldar el CSV:', err.message);
+}
 
     await logAudit(userId, 'CARGAR_APRENDICES_GENERAL', { fileName: result.fileName, totalRows: result.totalRows });
     return result;

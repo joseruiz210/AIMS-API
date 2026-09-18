@@ -36,7 +36,34 @@ class UserRepository {
     return executeWithRetry(() =>
       prisma.user.findUnique({
         where: { id },
-        select: this._defaultSelect(),
+        select: {
+          ...this._defaultSelect(),
+          matriculas: {
+            where: { estado: 'Activo' },
+            take: 1,
+            select: {
+              id: true,
+              trimestre: true,
+              sede: true,
+              estado: true,
+              ficha: {
+                select: {
+                  id: true,
+                  numero: true,
+                  jornada: true,
+                  sede: true,
+                  programa: {
+                    select: {
+                      id: true,
+                      nombre: true,
+                      codigo: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       })
     );
   }
@@ -119,6 +146,10 @@ class UserRepository {
       email: true,
       role: true,
       phone: true,
+      documentType: true,
+      documentNumber: true,
+      estadoAcademico: true,
+      especialidad: true,
       isActive: true,
       pushToken: true,
       createdAt: true,

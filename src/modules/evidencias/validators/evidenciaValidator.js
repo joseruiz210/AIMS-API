@@ -17,6 +17,9 @@ const createEvidencia = Joi.object({
     'string.guid': 'El fichaId debe ser un UUID válido',
     'any.required': 'El fichaId es requerido',
   }),
+  recursoUrl: Joi.string().trim().allow('', null).optional(),
+  formatoEntrega: Joi.string().trim().max(100).allow('', null).optional(),
+  ponderacion: Joi.string().trim().max(50).allow('', null).optional(),
 });
 
 const updateEvidencia = Joi.object({
@@ -24,6 +27,9 @@ const updateEvidencia = Joi.object({
   descripcion: Joi.string().trim().min(5),
   fechaLimite: Joi.date().iso(),
   fichaId: Joi.string().uuid(),
+  recursoUrl: Joi.string().trim().allow('', null).optional(),
+  formatoEntrega: Joi.string().trim().max(100).allow('', null).optional(),
+  ponderacion: Joi.string().trim().max(50).allow('', null).optional(),
 })
   .min(1)
   .messages({

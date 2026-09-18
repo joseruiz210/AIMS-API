@@ -21,6 +21,7 @@ router.use(authenticate);
  *         description: Calificaciones obtenidas exitosamente
  */
 router.get('/mis-calificaciones', authorize('APRENDIZ'), calificacionController.getMisCalificaciones);
+router.get('/admin-resumen', authorize('ADMIN', 'SUPERADMIN', 'INSTRUCTOR'), calificacionController.getAdminResumen);
 router.get('/ficha/:fichaId', authorize('INSTRUCTOR', 'ADMIN', 'SUPERADMIN'), calificacionController.getCalificacionesByFicha);
 
 /**

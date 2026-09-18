@@ -1,13 +1,12 @@
 const Joi = require('joi');
 
 const registerSchema = Joi.object({
-  firstName: Joi.string().trim().min(2).max(50).required().messages({
-    'string.empty': 'El nombre es obligatorio',
+  nombre: Joi.string().trim().min(2).max(100).optional(),
+  firstName: Joi.string().trim().min(2).max(50).optional().messages({
     'string.min': 'El nombre debe tener al menos 2 caracteres',
     'string.max': 'El nombre no puede exceder los 50 caracteres',
   }),
-  lastName: Joi.string().trim().min(2).max(50).required().messages({
-    'string.empty': 'El apellido es obligatorio',
+  lastName: Joi.string().trim().min(2).max(50).optional().messages({
     'string.min': 'El apellido debe tener al menos 2 caracteres',
     'string.max': 'El apellido no puede exceder los 50 caracteres',
   }),

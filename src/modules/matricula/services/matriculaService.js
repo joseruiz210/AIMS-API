@@ -15,9 +15,14 @@ class MatriculaService {
       throw AppError.notFound('El aprendiz especificado no existe');
     }
 
-    const existing = await matriculaRepository.findExisting(data.fichaId, data.aprendizId);
+    const existing = await matriculaRepository.findByAprendizId(data.aprendizId);
     if (existing) {
-      throw AppError.conflict('El aprendiz ya se encuentra matriculado en esta ficha');
+      if (existing.fichaId === data.fichaId) {
+        throw AppError.conflict('El aprendiz ya se encuentra matriculado en esta ficha');
+      }
+      throw AppError.conflict(
+        `El aprendiz ya se encuentra matriculado en la ficha ${existing.ficha?.numero || existing.fichaId}. Un aprendiz únicamente puede pertenecer a una sola ficha.`
+      );
     }
 
     return matriculaRepository.create({

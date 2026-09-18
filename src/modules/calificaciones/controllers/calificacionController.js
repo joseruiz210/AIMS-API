@@ -17,3 +17,8 @@ exports.registrarCalificacion = catchAsync(async (req, res) => {
   const resultado = await calificacionService.registrarCalificacion(req.user.id, req.body, req.user.role);
   ApiResponse.created(res, resultado, 'Calificación registrada exitosamente');
 });
+
+exports.getAdminResumen = catchAsync(async (req, res) => {
+  const data = await calificacionService.getAdminResumen();
+  ApiResponse.success(res, data, 'Resumen de calificaciones obtenido exitosamente');
+});

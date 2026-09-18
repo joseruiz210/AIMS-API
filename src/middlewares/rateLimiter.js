@@ -7,7 +7,7 @@ const AppError = require('../utils/appError');
  */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes window
-  max: 10, // Limit each IP to 10 requests per windowMs
+  max: process.env.NODE_ENV === 'production' ? 10 : 500, // Permitir testing fluido en desarrollo
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res, next) => {

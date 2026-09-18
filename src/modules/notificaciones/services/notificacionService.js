@@ -21,6 +21,11 @@ class NotificacionService {
   async createNotification(data) {
     return notificacionRepository.create(data);
   }
+
+  async notifyGlobal(data) {
+    const pushNotificationService = require('./pushNotificationService');
+    return pushNotificationService.notifyGlobal(data);
+  }
 }
 
 module.exports = new NotificacionService();

@@ -31,8 +31,19 @@ class EvidenciaService {
         select: { fichaId: true },
       });
 
-      if (matriculas.length > 0) {
-        where.fichaId = { in: matriculas.map((m) => m.fichaId) };
+      const enrolledFichaIds = matriculas.map((m) => m.fichaId);
+      if (enrolledFichaIds.length === 0) {
+        // El aprendiz no está asignado a ninguna ficha, no debe ver evidencias de fichas ajenas
+        return [];
+      }
+
+      if (query.fichaId) {
+        if (!enrolledFichaIds.includes(query.fichaId)) {
+          return [];
+        }
+        where.fichaId = query.fichaId;
+      } else {
+        where.fichaId = { in: enrolledFichaIds };
       }
     }
     return evidenciaRepository.getAll(where, aprendizId);
@@ -58,9 +69,14 @@ class EvidenciaService {
       fichaId = fichaDefault.id;
     }
 
+    let descripcion = data.descripcion;
+    if (data.recursoUrl && data.recursoUrl.trim()) {
+      descripcion += `\n\n🔗 **Recurso / Material de apoyo:** ${data.recursoUrl.trim()}`;
+    }
+
     const evidencia = await evidenciaRepository.create({
       titulo: data.titulo,
-      descripcion: data.descripcion,
+      descripcion,
       fechaLimite: new Date(data.fechaLimite || Date.now() + 7 * 24 * 60 * 60 * 1000),
       fichaId,
       instructorId,
@@ -100,6 +116,20 @@ class EvidenciaService {
     // 1. Obtener la evidencia directamente de PostgreSQL
     const evidencia = await this.getById(evidenciaId);
 
+    // Validar estrictamente que el aprendiz pertenezca a la ficha asignada
+    if (evidencia.fichaId) {
+      const matricula = await prisma.matricula.findFirst({
+        where: {
+          aprendizId,
+          fichaId: evidencia.fichaId,
+        },
+      });
+
+      if (!matricula) {
+        throw AppError.forbidden('No estás matriculado en la ficha asignada a esta actividad.');
+      }
+    }
+
     // 2. Evaluación pedagógica formativa
     let evaluacion = null;
     try {
@@ -124,6 +154,48 @@ class EvidenciaService {
     // 3. Persistencia estricta en PostgreSQL (tabla entrega_evidencias)
     const entrega = await evidenciaRepository.upsertEntrega(evidenciaId, aprendizId, payloadEntrega);
 
+    // 4. Sincronizar calificación en la tabla de calificaciones del aprendiz
+    if (evaluacion && evaluacion.nota !== undefined) {
+      try {
+        const notaNum = Number(evaluacion.nota);
+        const ficha = await prisma.ficha.findUnique({
+          where: { id: evidencia.fichaId },
+          include: { programa: { include: { competencias: true } } },
+        });
+        const compId = ficha?.programa?.competencias?.[0]?.id || null;
+
+        if (compId) {
+          const califExistente = await prisma.calificacion.findFirst({
+            where: { aprendizId, competenciaId: compId },
+          });
+
+          if (califExistente) {
+            await prisma.calificacion.update({
+              where: { id: califExistente.id },
+              data: {
+                nota: notaNum,
+                estado: notaNum >= 3.5 ? 'Aprobado' : 'Por Mejorar',
+                instructorId: evidencia.instructorId || califExistente.instructorId,
+              },
+            });
+          } else {
+            await prisma.calificacion.create({
+              data: {
+                aprendizId,
+                competenciaId: compId,
+                instructorId: evidencia.instructorId,
+                nota: notaNum,
+                periodo: '2026-1',
+                estado: notaNum >= 3.5 ? 'Aprobado' : 'Por Mejorar',
+              },
+            });
+          }
+        }
+      } catch (syncErr) {
+        console.error('[EvidenciaService] Error sincronizando calificación general:', syncErr.message);
+      }
+    }
+
     await logAudit(aprendizId, 'ENTREGAR_EVIDENCIA', {
       evidenciaId,
       entregaId: entrega.id,
@@ -142,6 +214,44 @@ class EvidenciaService {
   async calificarEntrega(userId, entregaId, nota) {
     const entrega = await evidenciaRepository.calificarEntrega(entregaId, nota);
     await logAudit(userId, 'CALIFICAR_ENTREGA', { entregaId, nota });
+
+    try {
+      const notaNum = Number(nota);
+      const ev = await prisma.evidencia.findUnique({
+        where: { id: entrega.evidenciaId },
+        include: { ficha: { include: { programa: { include: { competencias: true } } } } },
+      });
+      const compId = ev?.ficha?.programa?.competencias?.[0]?.id || null;
+      if (compId) {
+        const calif = await prisma.calificacion.findFirst({
+          where: { aprendizId: entrega.aprendizId, competenciaId: compId },
+        });
+        if (calif) {
+          await prisma.calificacion.update({
+            where: { id: calif.id },
+            data: {
+              nota: notaNum,
+              estado: notaNum >= 3.5 ? 'Aprobado' : 'Por Mejorar',
+              instructorId: userId,
+            },
+          });
+        } else {
+          await prisma.calificacion.create({
+            data: {
+              aprendizId: entrega.aprendizId,
+              competenciaId: compId,
+              instructorId: userId,
+              nota: notaNum,
+              periodo: '2026-1',
+              estado: notaNum >= 3.5 ? 'Aprobado' : 'Por Mejorar',
+            },
+          });
+        }
+      }
+    } catch (syncErr) {
+      console.error('[EvidenciaService] Error sincronizando calificacion docente:', syncErr.message);
+    }
+
     return entrega;
   }
 

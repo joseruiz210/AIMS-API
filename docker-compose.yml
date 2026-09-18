@@ -6,6 +6,7 @@ services:
       dockerfile: Dockerfile
     container_name: aims-backend
     restart: always
+    command: npm run dev
     ports:
       - "3000:3000"
     environment:

@@ -203,20 +203,22 @@ model Matricula {
 
 model CargaAprendices {
   id           String   @id @default(uuid())
-  fichaId      String   @map("ficha_id")
+  fichaId      String?  @map("ficha_id")
   uploadedById String   @map("uploaded_by_id")
   fileName     String   @map("file_name")
+  fileKey      String?  @map("file_key")
   totalRows    Int      @map("total_rows")
   createdRows  Int      @map("created_rows")
   createdAt    DateTime @default(now()) @map("created_at")
 
-  ficha      Ficha @relation(fields: [fichaId], references: [id], onDelete: Cascade)
-  uploadedBy User  @relation("CargasAprendices", fields: [uploadedById], references: [id])
+  ficha      Ficha? @relation(fields: [fichaId], references: [id], onDelete: Cascade)
+  uploadedBy User   @relation("CargasAprendices", fields: [uploadedById], references: [id])
 
   @@index([fichaId])
   @@index([uploadedById])
   @@map("cargas_aprendices")
 }
+
 
 model SesionAsistencia {
   id        String   @id @default(uuid())
@@ -409,16 +411,21 @@ model AuditLog {
 }
 
 model Evidencia {
-  id           String             @id @default(uuid())
-  titulo       String
-  descripcion  String
-  fechaLimite  DateTime           @map("fecha_limite")
-  fichaId      String             @map("ficha_id")
-  ficha        Ficha              @relation(fields: [fichaId], references: [id], onDelete: Cascade)
-  instructorId String             @map("instructor_id")
-  instructor   User               @relation("InstructorEvidencias", fields: [instructorId], references: [id], onDelete: Cascade)
-  createdAt    DateTime           @default(now()) @map("created_at")
-  entregas     EntregaEvidencia[]
+  id            String   @id @default(uuid())
+  titulo        String
+  descripcion   String
+  fechaLimite   DateTime @map("fecha_limite")
+  fichaId       String   @map("ficha_id")
+  instructorId  String   @map("instructor_id")
+  archivoKey    String?  @map("archivo_key")
+  archivoNombre String?  @map("archivo_nombre")
+  archivoMime   String?  @map("archivo_mime")
+  archivoSize   Int?     @map("archivo_size")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  ficha      Ficha              @relation(fields: [fichaId], references: [id], onDelete: Cascade)
+  instructor User               @relation("InstructorEvidencias", fields: [instructorId], references: [id], onDelete: Cascade)
+  entregas   EntregaEvidencia[]
 
   @@index([fichaId])
   @@index([instructorId])
@@ -426,15 +433,19 @@ model Evidencia {
 }
 
 model EntregaEvidencia {
-  id           String    @id @default(uuid())
-  evidenciaId  String    @map("evidencia_id")
-  evidencia    Evidencia @relation(fields: [evidenciaId], references: [id], onDelete: Cascade)
-  aprendizId   String    @map("aprendiz_id")
-  aprendiz     User      @relation("AprendizEntregas", fields: [aprendizId], references: [id], onDelete: Cascade)
-  archivoUrl   String?   @map("archivo_url")
-  comentario   String?
-  nota         Decimal?  @db.Decimal(3, 1)
-  fechaEntrega DateTime  @default(now()) @map("fecha_entrega")
+  id            String    @id @default(uuid())
+  evidenciaId   String    @map("evidencia_id")
+  evidencia     Evidencia @relation(fields: [evidenciaId], references: [id], onDelete: Cascade)
+  aprendizId    String    @map("aprendiz_id")
+  aprendiz      User      @relation("AprendizEntregas", fields: [aprendizId], references: [id], onDelete: Cascade)
+  archivoUrl    String?   @map("archivo_url")
+  archivoKey    String?   @map("archivo_key")
+  archivoNombre String?   @map("archivo_nombre")
+  archivoMime   String?   @map("archivo_mime")
+  archivoSize   Int?      @map("archivo_size")
+  comentario    String?
+  nota          Decimal?  @db.Decimal(3, 1)
+  fechaEntrega  DateTime  @default(now()) @map("fecha_entrega")
 
   @@unique([evidenciaId, aprendizId])
   @@index([evidenciaId])

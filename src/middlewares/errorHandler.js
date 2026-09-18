@@ -51,18 +51,26 @@ const errorHandler = (err, req, res, _next) => {
     errors = err.details.map((detail) => detail.message);
   }
 
-  // Log error in development
+  // Log error in development (all errors) or production (server errors only)
   if (process.env.NODE_ENV === 'development') {
     console.error('Error:', {
       message: err.message,
       stack: err.stack,
       statusCode,
     });
+  } else if (statusCode >= 500) {
+    // In production, always log server errors for observability
+    console.error(`[${new Date().toISOString()}] SERVER_ERROR ${statusCode}:`, err.message);
   }
+
+  // Safety net: never expose raw error messages for 500s in production
+  const safeMessage = statusCode >= 500 && process.env.NODE_ENV === 'production'
+    ? 'Error interno del servidor. Intenta de nuevo más tarde.'
+    : message;
 
   return res.status(statusCode).json({
     success: false,
-    message,
+    message: safeMessage,
     errors,
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });

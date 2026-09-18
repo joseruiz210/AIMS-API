@@ -1,10 +1,22 @@
 const prisma = require('../../../config/database');
 
 class FichaRepository {
-  async getAll(user = null) {
-    const where = user?.role === 'INSTRUCTOR'
-      ? { OR: [{ instructorId: user.id }, { instructorAssignments: { some: { instructorId: user.id } } }] }
-      : undefined;
+  async getAll(user = null, search = '') {
+    const term = String(search || '').trim();
+    const where = {
+      ...(user?.role === 'INSTRUCTOR'
+        ? { OR: [{ instructorId: user.id }, { instructorAssignments: { some: { instructorId: user.id } } }] }
+        : {}),
+      ...(term
+        ? {
+            OR: [
+              { numero: { contains: term, mode: 'insensitive' } },
+              { badgeCode: { contains: term, mode: 'insensitive' } },
+              { programa: { nombre: { contains: term, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
+    };
     const include = {
       programa: { select: { id: true, nombre: true, codigo: true } },
       instructor: { select: { id: true, firstName: true, lastName: true, email: true } },
@@ -18,7 +30,17 @@ class FichaRepository {
       return await prisma.ficha.findMany({ where, include, orderBy: { createdAt: 'desc' } });
     } catch (error) {
       if (error.code !== 'P2021') throw error;
-      const legacyWhere = user?.role === 'INSTRUCTOR' ? { instructorId: user.id } : undefined;
+      const legacyWhere = {
+        ...(user?.role === 'INSTRUCTOR' ? { instructorId: user.id } : {}),
+        ...(term
+          ? {
+              OR: [
+                { numero: { contains: term, mode: 'insensitive' } },
+                { codigo: { contains: term, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+      };
       const { instructorAssignments, ...legacyInclude } = include;
       return prisma.ficha.findMany({ where: legacyWhere, include: legacyInclude, orderBy: { createdAt: 'desc' } });
     }
@@ -50,6 +72,10 @@ class FichaRepository {
       const { instructorAssignments, ...legacyInclude } = include;
       return prisma.ficha.findUnique({ where: { id }, include: legacyInclude });
     }
+  }
+
+  async findById(id) {
+    return this.getById(id);
   }
 
   async create(data) {

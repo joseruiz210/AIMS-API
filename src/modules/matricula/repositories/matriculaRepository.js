@@ -37,6 +37,17 @@ class MatriculaRepository {
     });
   }
 
+  async findByAprendizId(aprendizId) {
+    return prisma.matricula.findFirst({
+      where: { aprendizId },
+      include: {
+        ficha: {
+          include: { programa: true },
+        },
+      },
+    });
+  }
+
   async findAll({ skip = 0, take = 10, where = {}, orderBy = { createdAt: 'desc' } }) {
     const [matriculas, total] = await prisma.$transaction([
       prisma.matricula.findMany({

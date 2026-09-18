@@ -11,7 +11,10 @@ const compression = require('compression');
 
 const app = express();
 
-// â”€â”€â”€ Global Middlewares â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Confiar en el proxy inverso de Azure (evita error de express-rate-limit con X-Forwarded-For)
+app.set('trust proxy', 1);
+
+// ─── Global Middlewares ───────────────────────────────────────────────────
 app.use(compression());
 app.use(helmet({
   crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },

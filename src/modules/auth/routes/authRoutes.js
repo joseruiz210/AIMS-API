@@ -24,7 +24,7 @@ const router = Router();
  *   description: Autenticación, gestión de sesión, verificación de correo y recuperación de contraseña
  */
 
-router.post('/register', validate({ body: registerSchema }), authController.register);
+router.post('/register', authLimiter, validate({ body: registerSchema }), authController.register);
 router.post('/login', authLimiter, validate({ body: loginSchema }), authController.login);
 router.post('/magic-link', authLimiter, validate({ body: emailOnlySchema }), authController.sendMagicLink);
 router.post('/magic-link/verify', authLimiter, authController.verifyMagicLink);

@@ -92,7 +92,9 @@ class AsistenciaRepository {
       for (const r of s.registros) {
         resultado.push({
           id: r.id,
+          sesionId: s.id,
           fecha: s.fecha,
+          tema: s.tema,
           aprendizId: r.aprendizId,
           aprendiz: r.aprendiz,
           estado: r.estado,
@@ -103,21 +105,45 @@ class AsistenciaRepository {
     return resultado;
   }
 
+  /**
+   * Busca la sesión de una ficha para el día indicado; si ya existe la reutiliza
+   * (y actualiza el tema si cambió) en vez de crear una nueva. Esto es lo que
+   * permite que el autoguardado llame este método muchas veces sin duplicar sesiones.
+   */
+  async findOrCreateSesion(fichaId, fechaInput, tema) {
+    const fecha = fechaInput ? new Date(fechaInput) : new Date();
+    const startOfDay = new Date(new Date(fecha).setHours(0, 0, 0, 0));
+    const endOfDay = new Date(new Date(fecha).setHours(23, 59, 59, 999));
+
+    const existente = await prisma.sesionAsistencia.findFirst({
+      where: { fichaId, fecha: { gte: startOfDay, lte: endOfDay } },
+    });
+
+    if (existente) {
+      if (tema && tema.trim() && tema.trim() !== existente.tema) {
+        return prisma.sesionAsistencia.update({
+          where: { id: existente.id },
+          data: { tema: tema.trim() },
+        });
+      }
+      return existente;
+    }
+
+    return prisma.sesionAsistencia.create({
+      data: {
+        fichaId,
+        fecha: startOfDay,
+        tema: (tema && tema.trim()) || 'Sesión Formativa',
+      },
+    });
+  }
+
   async registrarAsistenciaSesion(data) {
     const lista = data.asistencias || data.registros || [];
     const fichaId = data.fichaId;
-    const fecha = data.fecha ? new Date(data.fecha) : new Date();
-    const tema = data.tema || 'Sesión Formativa';
+    if (!fichaId) return { sesionId: null, tema: null, registros: [] };
 
-    if (!fichaId) return [];
-
-    const sesion = await prisma.sesionAsistencia.create({
-      data: {
-        fichaId,
-        fecha,
-        tema,
-      },
-    });
+    const sesion = await this.findOrCreateSesion(fichaId, data.fecha, data.tema);
 
     const created = [];
     for (const item of lista) {
@@ -145,7 +171,7 @@ class AsistenciaRepository {
       created.push(registro);
     }
 
-    return created;
+    return { sesionId: sesion.id, tema: sesion.tema, registros: created };
   }
 }
 

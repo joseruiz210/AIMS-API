@@ -10,11 +10,11 @@ exports.getMisAsistencias = catchAsync(async (req, res) => {
 exports.getAsistenciasByFicha = catchAsync(async (req, res) => {
   const { fichaId } = req.params;
   const { fecha } = req.query;
-  const data = await asistenciaService.getAsistenciasByFicha(fichaId, fecha);
+  const data = await asistenciaService.getAsistenciasByFicha(fichaId, fecha, req.user);
   ApiResponse.success(res, data, 'Asistencias de la ficha obtenidas exitosamente');
 });
 
 exports.registrarAsistencia = catchAsync(async (req, res) => {
-  const resultado = await asistenciaService.registrarAsistenciaSesion(req.user.id, req.body);
+  const resultado = await asistenciaService.registrarAsistenciaSesion(req.user.id, req.body, req.user.role);
   ApiResponse.created(res, resultado, 'Asistencias registradas exitosamente');
 });

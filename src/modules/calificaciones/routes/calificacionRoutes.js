@@ -20,8 +20,8 @@ router.use(authenticate);
  *       200:
  *         description: Calificaciones obtenidas exitosamente
  */
-router.get('/mis-calificaciones', calificacionController.getMisCalificaciones);
-router.get('/ficha/:fichaId', authorize('INSTRUCTOR', 'ADMIN'), calificacionController.getCalificacionesByFicha);
+router.get('/mis-calificaciones', authorize('APRENDIZ'), calificacionController.getMisCalificaciones);
+router.get('/ficha/:fichaId', authorize('INSTRUCTOR', 'ADMIN', 'SUPERADMIN'), calificacionController.getCalificacionesByFicha);
 
 /**
  * @swagger
@@ -55,6 +55,6 @@ router.get('/ficha/:fichaId', authorize('INSTRUCTOR', 'ADMIN'), calificacionCont
  *       200:
  *         description: Calificación registrada exitosamente
  */
-router.post('/', authorize('INSTRUCTOR', 'ADMIN'), validate(calificacionValidator.registrarCalificacion), calificacionController.registrarCalificacion);
+router.post('/', authorize('INSTRUCTOR', 'ADMIN', 'SUPERADMIN'), validate(calificacionValidator.registrarCalificacion), calificacionController.registrarCalificacion);
 
 module.exports = router;

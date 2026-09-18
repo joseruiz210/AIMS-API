@@ -6,7 +6,7 @@ class ReportesRepository {
       prisma.user.count({ where: { role: 'APRENDIZ', isActive: true } }),
       prisma.user.count({ where: { role: 'INSTRUCTOR', isActive: true } }),
       prisma.programa.count(),
-      prisma.ficha.count({ where: { isActive: true } }),
+      prisma.ficha.count({ where: { estado: 'Activo' } }),
       prisma.user.groupBy({
         by: ['estadoAcademico'],
         where: { role: 'APRENDIZ' },
@@ -14,7 +14,7 @@ class ReportesRepository {
       }),
     ]);
 
-    const asistenciasRecientes = await prisma.asistencia.groupBy({
+    const asistenciasRecientes = await prisma.registroAsistencia.groupBy({
       by: ['estado'],
       _count: { id: true },
     });

@@ -66,10 +66,27 @@ const aprendizIdParam = Joi.object({
   aprendizId: Joi.string().uuid().required(),
 });
 
+const instructorAssignment = Joi.object({
+  instructorId: Joi.string().uuid().required(),
+  isLeader: Joi.boolean().default(false),
+});
+
+const instructorLeader = Joi.object({
+  instructorId: Joi.string().uuid().required(),
+});
+
+const instructorAssignmentParam = Joi.object({
+  id: Joi.string().uuid().required(),
+  instructorId: Joi.string().uuid().required(),
+});
+
 module.exports = {
   createFicha,
   updateFicha,
   addAprendiz,
   idParam,
   aprendizIdParam,
+  instructorAssignment,
+  instructorLeader,
+  instructorAssignmentParam,
 };

@@ -1,27 +1,31 @@
 const prisma = require('../../../config/database');
 
 class FichaRepository {
-  async getAll() {
-    return prisma.ficha.findMany({
-      include: {
-        programa: {
-          select: { id: true, nombre: true, codigo: true },
-        },
-        instructor: {
-          select: { id: true, firstName: true, lastName: true, email: true },
-        },
-        _count: {
-          select: { matriculas: true, horarios: true },
-        },
+  async getAll(user = null) {
+    const where = user?.role === 'INSTRUCTOR'
+      ? { OR: [{ instructorId: user.id }, { instructorAssignments: { some: { instructorId: user.id } } }] }
+      : undefined;
+    const include = {
+      programa: { select: { id: true, nombre: true, codigo: true } },
+      instructor: { select: { id: true, firstName: true, lastName: true, email: true } },
+      instructorAssignments: {
+        include: { instructor: { select: { id: true, firstName: true, lastName: true, email: true } } },
+        orderBy: { isLeader: 'desc' },
       },
-      orderBy: { createdAt: 'desc' },
-    });
+      _count: { select: { matriculas: true, horarios: true } },
+    };
+    try {
+      return await prisma.ficha.findMany({ where, include, orderBy: { createdAt: 'desc' } });
+    } catch (error) {
+      if (error.code !== 'P2021') throw error;
+      const legacyWhere = user?.role === 'INSTRUCTOR' ? { instructorId: user.id } : undefined;
+      const { instructorAssignments, ...legacyInclude } = include;
+      return prisma.ficha.findMany({ where: legacyWhere, include: legacyInclude, orderBy: { createdAt: 'desc' } });
+    }
   }
 
   async getById(id) {
-    return prisma.ficha.findUnique({
-      where: { id },
-      include: {
+    const include = {
         programa: true,
         instructor: {
           select: { id: true, firstName: true, lastName: true, email: true },
@@ -34,8 +38,18 @@ class FichaRepository {
           },
         },
         horarios: true,
-      },
-    });
+        instructorAssignments: {
+          include: { instructor: { select: { id: true, firstName: true, lastName: true, email: true } } },
+          orderBy: { isLeader: 'desc' },
+        },
+    };
+    try {
+      return await prisma.ficha.findUnique({ where: { id }, include });
+    } catch (error) {
+      if (error.code !== 'P2021') throw error;
+      const { instructorAssignments, ...legacyInclude } = include;
+      return prisma.ficha.findUnique({ where: { id }, include: legacyInclude });
+    }
   }
 
   async create(data) {

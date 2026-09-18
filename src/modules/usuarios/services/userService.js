@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const userRepository = require('../repositories/userRepository');
 const AppError = require('../../../utils/appError');
+const logAudit = require('../../../utils/auditLogger');
 
 const SALT_ROUNDS = 12;
 
@@ -29,6 +30,27 @@ class UserService {
     return user;
   }
 
+  async createByAdmin(adminId, userData) {
+    const requester = await userRepository.findById(adminId);
+    if (userData.role === 'ADMIN' && requester?.role !== 'SUPERADMIN') {
+      throw AppError.forbidden('Solo SUPERADMIN puede crear cuentas ADMIN');
+    }
+    if (userData.role === 'SUPERADMIN') {
+      throw AppError.forbidden('No se pueden crear cuentas SUPERADMIN desde este endpoint');
+    }
+    const user = await this.create({
+      ...userData,
+      isEmailVerified: true,
+    });
+
+    await logAudit(adminId, 'CREAR_USUARIO_ADMIN', {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    return user;
+  }
   async findAll(queryParams) {
     const {
       page = 1,

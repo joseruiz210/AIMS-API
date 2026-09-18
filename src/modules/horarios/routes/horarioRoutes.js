@@ -21,6 +21,7 @@ router.use(authenticate);
  *         description: Horario obtenido exitosamente
  */
 router.get('/mi-horario', horarioController.getMiHorario);
+router.get('/ficha/:fichaId', horarioController.getByFicha);
 
 /**
  * @swagger
@@ -58,5 +59,7 @@ router.get('/mi-horario', horarioController.getMiHorario);
  *         description: Horario creado exitosamente
  */
 router.post('/', authorize('ADMIN', 'INSTRUCTOR'), validate(horarioValidator.createHorario), horarioController.create);
+router.put('/:id', authorize('ADMIN', 'INSTRUCTOR'), horarioController.update);
+router.delete('/:id', authorize('ADMIN', 'INSTRUCTOR'), horarioController.delete);
 
 module.exports = router;

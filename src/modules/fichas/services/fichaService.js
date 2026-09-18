@@ -7,27 +7,68 @@ const XLSX = require('xlsx');
 
 const REQUIRED_COLUMNS = ['tipoDocumento', 'numeroDocumento', 'nombres', 'apellidos', 'correo'];
 const HEADER_ALIASES = {
+  // tipoDocumento
   tipodocumento: 'tipoDocumento',
   tipodedocumento: 'tipoDocumento',
+  tipodoc: 'tipoDocumento',
+  tdocumento: 'tipoDocumento',
   documenttype: 'tipoDocumento',
+  doctype: 'tipoDocumento',
+  tipo: 'tipoDocumento',
+  // numeroDocumento
   numerodocumento: 'numeroDocumento',
   numerodedocumento: 'numeroDocumento',
+  numerodoc: 'numeroDocumento',
+  numdocumento: 'numeroDocumento',
+  numdoc: 'numeroDocumento',
+  nodocumento: 'numeroDocumento',
+  nodoc: 'numeroDocumento',
   documentnumber: 'numeroDocumento',
+  docnumber: 'numeroDocumento',
+  documento: 'numeroDocumento',
+  doc: 'numeroDocumento',
+  identificacion: 'numeroDocumento',
+  numeroidentificacion: 'numeroDocumento',
+  cedula: 'numeroDocumento',
+  tarjetaidentidad: 'numeroDocumento',
+  // nombres
   nombres: 'nombres',
   nombre: 'nombres',
   firstname: 'nombres',
+  name: 'nombres',
+  // apellidos
   apellidos: 'apellidos',
   apellido: 'apellidos',
   lastname: 'apellidos',
+  surname: 'apellidos',
+  // correo
   correo: 'correo',
+  correoelectronico: 'correo',
+  correoelectronica: 'correo',
+  correoelectronic: 'correo',
+  correoinstitucional: 'correo',
+  correomisenas: 'correo',
+  correomisena: 'correo',
+  correosena: 'correo',
+  correosoysena: 'correo',
+  soysena: 'correo',
   email: 'correo',
+  mail: 'correo',
+  // ficha
   ficha: 'ficha',
+  fichas: 'ficha',
   fichanumero: 'ficha',
   numerodeficha: 'ficha',
   numeroficha: 'ficha',
+  noficha: 'ficha',
+  codigoficha: 'ficha',
+  numficha: 'ficha',
+  // programa
   programa: 'programa',
   programadeformacion: 'programa',
   programaformacion: 'programa',
+  nombreprograma: 'programa',
+  formacion: 'programa',
 };
 
 const normalizeHeader = (value) => String(value || '')
@@ -37,6 +78,48 @@ const normalizeHeader = (value) => String(value || '')
   .replace(/[^a-z0-9]/g, '');
 
 const normalizeValue = (value) => String(value ?? '').trim();
+
+const cleanDocNumber = (val) => String(val ?? '').replace(/[\.\s-]/g, '').trim();
+
+const normalizeDocType = (val) => {
+  const clean = String(val ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase();
+  if (clean.includes('CEDULA DE CIUDADANIA') || clean === 'CC' || clean === 'C.C.') return 'CC';
+  if (clean.includes('TARJETA DE IDENTIDAD') || clean === 'TI' || clean === 'T.I.') return 'TI';
+  if (clean.includes('CEDULA DE EXTRANJERIA') || clean === 'CE' || clean === 'C.E.') return 'CE';
+  if (clean.includes('PASAPORTE') || clean === 'PAS' || clean === 'PA') return 'PAS';
+  if (clean.includes('PERMISO ESPECIAL') || clean === 'PEP') return 'PEP';
+  if (clean.includes('PERMISO POR PROTECCION') || clean === 'PPT') return 'PPT';
+  return clean || 'CC';
+};
+
+const resolveHeader = (header) => {
+  const norm = normalizeHeader(header);
+  if (HEADER_ALIASES[norm]) return HEADER_ALIASES[norm];
+
+  // Documento
+  if (norm.includes('documento') || norm.includes('identificacion') || norm.includes('cedula') || norm.includes('tarjeta')) {
+    if (norm.includes('tipo') || norm.startsWith('tip')) return 'tipoDocumento';
+    return 'numeroDocumento';
+  }
+  // Nombres
+  if ((norm.includes('nombre') || norm.includes('name')) && !norm.includes('programa')) return 'nombres';
+  // Apellidos
+  if (norm.includes('apellido') || norm.includes('lastname') || norm.includes('surname')) return 'apellidos';
+  // Correo / Email (admite gmail, soysena, misena, etc.)
+  if (norm.includes('correo') || norm.includes('email') || norm.includes('mail') || norm.includes('soysena') || norm.includes('misena') || norm.includes('gmail')) {
+    return 'correo';
+  }
+  // Ficha
+  if (norm.includes('ficha')) return 'ficha';
+  // Programa
+  if (norm.includes('programa') || norm.includes('formacion')) return 'programa';
+
+  return norm;
+};
 
 const parseLearnersFile = (buffer, fileName) => {
   let workbook;
@@ -55,20 +138,61 @@ const parseLearnersFile = (buffer, fileName) => {
   const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
   if (!rows.length) throw AppError.badRequest('El archivo está vacío');
 
-  const headers = rows[0].map(normalizeHeader);
-  const columns = headers.map((header) => HEADER_ALIASES[header] || header);
+  // Detectar la fila de encabezados dinámicamente (por si hay filas vacías o títulos institucionales arriba)
+  let headerRowIndex = 0;
+  for (let i = 0; i < Math.min(rows.length, 10); i++) {
+    const candidateRow = rows[i] || [];
+    const matchedCount = candidateRow.filter((cell) => {
+      const h = resolveHeader(cell);
+      return ['tipoDocumento', 'numeroDocumento', 'nombres', 'apellidos', 'correo'].includes(h);
+    }).length;
+    if (matchedCount >= 2) {
+      headerRowIndex = i;
+      break;
+    }
+  }
 
-  if (new Set(columns).size !== columns.length) {
+  const headerRow = rows[headerRowIndex] || [];
+  let emailColIndex = 0;
+  const columns = headerRow.map((rawHeader) => {
+    const resolved = resolveHeader(rawHeader);
+    if (resolved === 'correo') {
+      emailColIndex++;
+      return emailColIndex === 1 ? 'correo' : `correo_alt_${emailColIndex}`;
+    }
+    return resolved;
+  });
+
+  const nonAltColumns = columns.filter((c) => !c.startsWith('correo_alt_'));
+  if (new Set(nonAltColumns).size !== nonAltColumns.length) {
     throw AppError.badRequest('El archivo contiene columnas duplicadas');
   }
 
   const missing = REQUIRED_COLUMNS.filter((column) => !columns.includes(column));
   if (missing.length) throw AppError.badRequest(`Faltan columnas obligatorias: ${missing.join(', ')}`);
 
-  const learners = rows.slice(1).map((row, index) => {
+  const learners = rows.slice(headerRowIndex + 1).map((row, index) => {
     const learner = {};
     columns.forEach((column, columnIndex) => { learner[column] = normalizeValue(row[columnIndex]); });
-    learner.rowNumber = index + 2;
+    learner.rowNumber = headerRowIndex + index + 2;
+
+    // Si el archivo tiene múltiples columnas de correo (ej. Soy Sena y Gmail/Personal), priorizar institucional o la que esté diligenciada
+    const emailCandidates = [
+      learner.correo,
+      learner.correo_alt_2,
+      learner.correo_alt_3,
+      learner.correo_alt_4,
+    ].map((e) => (e || '').trim()).filter(Boolean);
+
+    const senaEmail = emailCandidates.find((e) => /@(soy\.)?sena\.edu\.co|@misena\.edu\.co/i.test(e));
+    learner.correo = senaEmail || emailCandidates[0] || '';
+
+    if (learner.numeroDocumento) {
+      learner.numeroDocumento = cleanDocNumber(learner.numeroDocumento);
+    }
+    if (learner.tipoDocumento) {
+      learner.tipoDocumento = normalizeDocType(learner.tipoDocumento);
+    }
     return learner;
   }).filter((learner) => REQUIRED_COLUMNS.some((column) => learner[column] !== ''));
 
@@ -100,8 +224,44 @@ const validateLearners = (learners) => {
 };
 
 class FichaService {
-  async getAll(user) {
-    return fichaRepository.getAll(user);
+  async searchPublic(search = '') {
+    const term = String(search || '').trim();
+    const where = {
+      estado: 'Activo',
+      ...(term
+        ? {
+            OR: [
+              { numero: { contains: term, mode: 'insensitive' } },
+              { badgeCode: { contains: term, mode: 'insensitive' } },
+              { programa: { nombre: { contains: term, mode: 'insensitive' } } },
+              { programa: { codigo: { contains: term, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
+    };
+    return prisma.ficha.findMany({
+      where,
+      select: {
+        id: true,
+        numero: true,
+        badgeCode: true,
+        estado: true,
+        jornada: true,
+        programa: {
+          select: {
+            id: true,
+            nombre: true,
+            codigo: true,
+          },
+        },
+      },
+      take: 20,
+      orderBy: { numero: 'asc' },
+    });
+  }
+
+  async getAll(user, search = '') {
+    return fichaRepository.getAll(user, search);
   }
 
   async getById(id, user = null) {
@@ -157,9 +317,17 @@ class FichaService {
       throw AppError.badRequest('El usuario no existe o no tiene el rol APRENDIZ');
     }
 
-    const isInFicha = await fichaRepository.isAprendizInFicha(fichaId, aprendizId);
-    if (isInFicha) {
-      throw AppError.conflict('El aprendiz ya está matriculado en esta ficha');
+    const existingMatricula = await prisma.matricula.findFirst({
+      where: { aprendizId },
+      include: { ficha: true },
+    });
+    if (existingMatricula) {
+      if (existingMatricula.fichaId === fichaId) {
+        throw AppError.conflict('El aprendiz ya está matriculado en esta ficha');
+      }
+      throw AppError.conflict(
+        `El aprendiz ya se encuentra matriculado en la ficha ${existingMatricula.ficha?.numero || existingMatricula.fichaId}. Un aprendiz únicamente puede pertenecer a una sola ficha.`
+      );
     }
 
     const relacion = await fichaRepository.addAprendiz(fichaId, aprendizId);
@@ -234,6 +402,7 @@ class FichaService {
             documentType: learner.tipoDocumento.toUpperCase(),
             documentNumber: learner.numeroDocumento,
             isPreRegistered: true,
+            isActive: false,
           },
         });
         await tx.matricula.upsert({
@@ -330,6 +499,7 @@ class FichaService {
               documentType: learner.tipoDocumento.toUpperCase(),
               documentNumber: learner.numeroDocumento,
               isPreRegistered: true,
+              isActive: false,
             },
           });
           userMap.set(email, user);

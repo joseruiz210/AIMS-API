@@ -51,6 +51,13 @@ class HorarioRepository {
     return matricula.ficha.horarios;
   }
 
+  async getByFicha(fichaId) {
+    return prisma.horario.findMany({
+      where: { fichaId },
+      orderBy: [{ diaSemana: 'asc' }, { horaInicio: 'asc' }],
+    });
+  }
+
   async create(data) {
     return prisma.horario.create({
       data,

@@ -6,6 +6,7 @@ services:
       dockerfile: Dockerfile
     container_name: aims-backend
     restart: always
+    command: npm run dev
     ports:
       - "3000:3000"
     environment:
@@ -33,7 +34,7 @@ services:
   # ─── FRONTEND (Expo / React Native Web) ──────────────────────────
   frontend:
     build:
-      context: ./frontend/MiProyecto
+      context: ./frontend/MiProyecto/MiProyecto
       dockerfile: Dockerfile
     container_name: aims-frontend
     restart: always
@@ -44,7 +45,7 @@ services:
       - EXPO_PUBLIC_GOOGLE_CLIENT_ID=801203695881-vjkbm79n28utn02fkiei3tmrieqmkd37.apps.googleusercontent.com
       - GOOGLE_CLIENT_ID=801203695881-vjkbm79n28utn02fkiei3tmrieqmkd37.apps.googleusercontent.com
     volumes:
-      - ./frontend/MiProyecto:/app
+      - ./frontend/MiProyecto/MiProyecto:/app
       - /app/node_modules
     depends_on:
       - backend

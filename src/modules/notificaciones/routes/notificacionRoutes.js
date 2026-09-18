@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const notificacionController = require('../controllers/notificacionController');
-const { authenticate } = require('../../../middlewares/auth');
+const { authenticate, authorize } = require('../../../middlewares/auth');
 
 const router = Router();
 
@@ -53,5 +53,7 @@ router.patch('/:id/read', notificacionController.markAsRead);
  *         description: Todas las notificaciones fueron marcadas como leídas
  */
 router.patch('/read-all', notificacionController.markAllAsRead);
+
+router.post('/global', authorize('ADMIN', 'SUPERADMIN'), notificacionController.enviarGlobal);
 
 module.exports = router;

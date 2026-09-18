@@ -28,6 +28,12 @@ const updateUser = Joi.object({
     .messages({
       'string.pattern.base': 'Debe proporcionar un número de teléfono válido',
     }),
+  documentType: Joi.string().trim().max(20).allow(null, '').messages({
+    'string.max': 'El tipo de documento no puede exceder 20 caracteres',
+  }),
+  documentNumber: Joi.string().trim().max(30).allow(null, '').messages({
+    'string.max': 'El número de documento no puede exceder 30 caracteres',
+  }),
   role: Joi.string()
     .valid(...ROLES)
     .messages({

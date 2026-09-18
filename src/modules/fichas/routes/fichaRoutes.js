@@ -22,6 +22,10 @@ const uploadLearnersFile = (req, res, next) => upload.single('archivo')(req, res
 
 const router = Router();
 
+// Rutas públicas accesibles sin autenticación (utilizadas en registro y búsqueda rápida)
+router.get('/public', fichaController.searchPublic);
+router.get('/buscar', fichaController.searchPublic);
+
 router.use(authenticate);
 
 /**

@@ -155,6 +155,50 @@ class PushNotificationService {
       console.error('[PushNotification] Error al notificar usuario individual:', error.message);
     }
   }
+
+  async notifyGlobal({ title, body, data = {}, tipo = 'SISTEMA', targetRole = null }) {
+    try {
+      const where = {
+        isActive: true,
+        ...(targetRole && targetRole !== 'TODOS' && targetRole !== 'ALL' ? { role: targetRole } : {}),
+      };
+      const users = await prisma.user.findMany({
+        where,
+        select: { id: true, pushToken: true },
+      });
+
+      if (users.length === 0) return { notifiedCount: 0, pushCount: 0 };
+
+      await prisma.notificacion.createMany({
+        data: users.map(u => ({
+          userId: u.id,
+          titulo: title,
+          mensaje: body,
+          tipo,
+          leida: false,
+        })),
+      });
+
+      const pushMessages = users
+        .filter(u => u.pushToken && this.isValidExpoPushToken(u.pushToken))
+        .map(u => ({
+          to: u.pushToken,
+          sound: 'default',
+          title,
+          body,
+          data: { ...data, tipo },
+        }));
+
+      if (pushMessages.length > 0) {
+        await this.sendExpoPushBatch(pushMessages);
+      }
+
+      return { notifiedCount: users.length, pushCount: pushMessages.length };
+    } catch (error) {
+      console.error('[PushNotification] Error en notificación global:', error.message);
+      throw error;
+    }
+  }
 }
 
 module.exports = new PushNotificationService();

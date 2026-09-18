@@ -2,8 +2,14 @@ const fichaService = require('../services/fichaService');
 const catchAsync = require('../../../utils/catchAsync');
 const ApiResponse = require('../../../utils/response');
 
+exports.searchPublic = catchAsync(async (req, res) => {
+  const { search } = req.query;
+  const fichas = await fichaService.searchPublic(search);
+  ApiResponse.success(res, fichas, 'Fichas públicas obtenidas');
+});
+
 exports.getAll = catchAsync(async (req, res) => {
-  const fichas = await fichaService.getAll(req.user);
+  const fichas = await fichaService.getAll(req.user, req.query.search);
   ApiResponse.success(res, fichas, 'Fichas obtenidas exitosamente');
 });
 

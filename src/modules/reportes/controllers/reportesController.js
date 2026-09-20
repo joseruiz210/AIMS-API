@@ -1,7 +1,6 @@
 const reportesService = require('../services/reportesService');
 const { success } = require('../../../utils/response');
 const catchAsync = require('../../../utils/catchAsync');
-const reportesService = require('../services/reportesService');
 const AppError = require('../../../utils/appError');
 
 class ReportesController {

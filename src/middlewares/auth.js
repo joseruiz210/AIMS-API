@@ -22,6 +22,8 @@ const authenticate = (req, res, next) => {
 
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.split(' ')[1];
+  } else if (req.query && req.query.token) {
+    token = req.query.token;
   } else {
     const cookies = parseCookies(req.headers.cookie);
     token = cookies.token;
@@ -36,7 +38,10 @@ const authenticate = (req, res, next) => {
     req.user = decoded;
     next();
   } catch (error) {
-    return next(error);
+    if (error.name === 'TokenExpiredError') {
+      return next(AppError.unauthorized('Token expirado'));
+    }
+    return next(AppError.unauthorized('Token de acceso inválido'));
   }
 };
 

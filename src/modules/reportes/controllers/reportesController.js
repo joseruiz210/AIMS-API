@@ -1,3 +1,4 @@
+const reportesService = require('../services/reportesService');
 const { success } = require('../../../utils/response');
 const catchAsync = require('../../../utils/catchAsync');
 const reportesService = require('../services/reportesService');
@@ -5,14 +6,7 @@ const AppError = require('../../../utils/appError');
 
 class ReportesController {
   getMatriculasMensuales = catchAsync(async (req, res) => {
-    const monthlyData = [
-      { month: 'Feb', count: 48 },
-      { month: 'Mar', count: 38 },
-      { month: 'Abr', count: 52 },
-      { month: 'May', count: 28 },
-      { month: 'Jun', count: 55 },
-      { month: 'Jul', count: 27 },
-    ];
+    const monthlyData = await reportesService.getMatriculasMensuales();
     return success(res, monthlyData, 'Matrículas mensuales obtenidas exitosamente');
   });
 
@@ -55,6 +49,16 @@ class ReportesController {
       { downloadUrl: '/api/v1/reportes/exportar?type=riesgo', format: 'PDF' },
       'Reporte de casos en seguimiento generado'
     );
+  });
+
+  exportarReporte = catchAsync(async (req, res) => {
+    const { type = 'asistencia' } = req.query;
+    const { buffer, filename } = await reportesService.exportarReportePDF(type);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    return res.status(200).send(buffer);
   });
 }
 

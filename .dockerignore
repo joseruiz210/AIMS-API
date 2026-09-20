@@ -7,4 +7,4 @@ frontend
 tests
 coverage
 README.md
-*.md
+.md

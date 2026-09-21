@@ -50,9 +50,9 @@ const queryUsers = Joi.object({
   page: Joi.number().integer().min(1).default(1).messages({
     'number.min': 'La página debe ser al menos 1',
   }),
-  limit: Joi.number().integer().min(1).max(100).default(10).messages({
+  limit: Joi.number().integer().min(1).max(1000).default(10).messages({
     'number.min': 'El límite debe ser al menos 1',
-    'number.max': 'El límite no puede exceder 100',
+    'number.max': 'El límite no puede exceder 1000',
   }),
   role: Joi.string()
     .valid(...ROLES)

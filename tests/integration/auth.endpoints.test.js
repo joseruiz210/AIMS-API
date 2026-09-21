@@ -245,6 +245,21 @@ describe('Auth Module Complete Integration Tests', () => {
       expect(res.body.success).toBe(true);
     });
 
+    test('should return HTML landing page when verify-email is requested by a browser (Accept: text/html)', async () => {
+      authRepository.findUserByVerificationToken.mockResolvedValue(mockUser);
+      authRepository.verifyUserEmail.mockResolvedValue(true);
+
+      const res = await request(app)
+        .get('/api/v1/auth/verify-email')
+        .set('Accept', 'text/html')
+        .query({ token: 'valid-verification-token-string' });
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('AIMS');
+      expect(res.text).toContain('Cuenta Verificada y Activada');
+      expect(res.text).toContain('miproyecto://auth');
+    });
+
     test('should reject invalid or expired verification token (400)', async () => {
       authRepository.findUserByVerificationToken.mockResolvedValue(null);
 
@@ -346,6 +361,20 @@ describe('Auth Module Complete Integration Tests', () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(authRepository.revokeAllUserRefreshTokens).toHaveBeenCalledWith(mockUser.id);
+    });
+
+    test('should render HTML page on GET /api/v1/auth/reset-password when opened by browser', async () => {
+      authRepository.findUserByResetToken.mockResolvedValue(mockUser);
+
+      const res = await request(app)
+        .get('/api/v1/auth/reset-password')
+        .set('Accept', 'text/html')
+        .query({ token: 'valid-reset-token' });
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('AIMS');
+      expect(res.text).toContain('Restablecer Contraseña');
+      expect(res.text).toContain('miproyecto://reset-password');
     });
   });
 

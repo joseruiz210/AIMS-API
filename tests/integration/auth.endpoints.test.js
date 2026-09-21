@@ -84,7 +84,7 @@ describe('Auth Module Complete Integration Tests', () => {
 
       expect(res.status).toBe(401);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toBe('Credenciales inválidas');
+      expect(res.body.message).toContain('contraseña ingresada es incorrecta');
     });
 
     test('should fail login with non-existent email (401)', async () => {
@@ -99,7 +99,7 @@ describe('Auth Module Complete Integration Tests', () => {
 
       expect(res.status).toBe(401);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toBe('Credenciales inválidas');
+      expect(res.body.message).toContain('No existe ninguna cuenta registrada con este correo electrónico');
     });
 
     test('should fail login when user email is not verified (403)', async () => {

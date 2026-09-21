@@ -4,15 +4,26 @@ const env = require('../config/env');
 let transporter = null;
 
 if (env.smtp.user && env.smtp.pass) {
-  transporter = nodemailer.createTransport({
-    host: env.smtp.host,
-    port: env.smtp.port,
-    secure: env.smtp.port === 465,
-    auth: {
-      user: env.smtp.user,
-      pass: env.smtp.pass,
-    },
-  });
+  const isGmail = env.smtp.host?.includes('gmail') || env.smtp.user?.includes('@gmail.com');
+  transporter = nodemailer.createTransport(
+    isGmail
+      ? {
+          service: 'gmail',
+          auth: {
+            user: env.smtp.user,
+            pass: env.smtp.pass,
+          },
+        }
+      : {
+          host: env.smtp.host,
+          port: env.smtp.port,
+          secure: env.smtp.port === 465,
+          auth: {
+            user: env.smtp.user,
+            pass: env.smtp.pass,
+          },
+        }
+  );
 }
 
 /**
@@ -78,21 +89,31 @@ const sendVerificationEmail = async (email, token, clientOrigin) => {
   const baseUrl = _getCleanBaseUrl(clientOrigin);
   const verificationUrl = `${baseUrl}/verify-email?token=${token}`;
   const html = `
-    <div style="font-family: Arial, sans-serif; padding: 20px;">
-      <h2>Bienvenido a AIMS API</h2>
-      <p>Por favor confirma tu dirección de correo electrónico haciendo clic en el siguiente enlace:</p>
-      <a href="${verificationUrl}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Verificar Correo</a>
-      <p style="margin-top: 20px;">O copia y pega este token de verificación:</p>
-      <code style="background-color: #f4f4f4; padding: 5px 10px; border-radius: 3px;">${token}</code>
-      <p style="color: #666; font-size: 12px; margin-top: 30px;">Si no creaste esta cuenta, puedes ignorar este correo.</p>
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 560px; margin: 0 auto; background-color: #0B1220; color: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #C59427;">
+      <div style="background-color: #0B1220; padding: 24px; text-align: center; border-bottom: 2px solid #C59427;">
+        <h1 style="color: #C59427; margin: 0; font-size: 24px; letter-spacing: 2px;">AIMS</h1>
+        <p style="color: #94A3B8; margin: 4px 0 0; font-size: 12px;">SISTEMA DE GESTIÓN ACADÉMICA INTELIGENTE</p>
+      </div>
+      <div style="padding: 28px; background-color: #0F172A;">
+        <h2 style="color: #FFFFFF; margin-top: 0;">¡Bienvenido a AIMS!</h2>
+        <p style="color: #CBD5E1; font-size: 15px; line-height: 1.5;">Por favor confirma tu correo electrónico para activar tu cuenta y poder iniciar sesión en la plataforma:</p>
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${verificationUrl}" style="background-color: #C59427; color: #0B1220; font-weight: bold; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-size: 15px;">Verificar mi Correo</a>
+        </div>
+        <p style="color: #94A3B8; font-size: 13px; margin-top: 24px;">Si estás usando la aplicación móvil o el enlace no abre, copia y pega este código de verificación en la app:</p>
+        <div style="background-color: #1E293B; border: 1px dashed #C59427; padding: 12px; border-radius: 6px; text-align: center; margin: 12px 0;">
+          <code style="color: #FCD34D; font-size: 16px; font-weight: bold; letter-spacing: 1px;">${token}</code>
+        </div>
+        <p style="color: #64748B; font-size: 12px; margin-top: 24px;">Si tú no solicitaste crear esta cuenta, puedes ignorar este mensaje de forma segura.</p>
+      </div>
     </div>
   `;
 
   return sendEmail({
     to: email,
-    subject: 'Verificación de Correo - AIMS API',
+    subject: 'Verifica tu cuenta en AIMS',
     html,
-    text: `Verifica tu cuenta con este token: ${token} o ingresando a: ${verificationUrl}`,
+    text: `Verifica tu cuenta en AIMS con este código: ${token} o ingresando a: ${verificationUrl}`,
   });
 };
 
@@ -103,22 +124,32 @@ const sendPasswordResetEmail = async (email, token, clientOrigin) => {
   const baseUrl = _getCleanBaseUrl(clientOrigin);
   const resetUrl = `${baseUrl}/reset-password?token=${token}`;
   const html = `
-    <div style="font-family: Arial, sans-serif; padding: 20px;">
-      <h2>Recuperación de Contraseña - AIMS API</h2>
-      <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para continuar:</p>
-      <a href="${resetUrl}" style="background-color: #008CBA; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Restablecer Contraseña</a>
-      <p style="margin-top: 20px;">O copia y pega este token de recuperación:</p>
-      <code style="background-color: #f4f4f4; padding: 5px 10px; border-radius: 3px;">${token}</code>
-      <p style="color: #d9534f; font-size: 13px; margin-top: 15px;">Este token expira en 1 hora.</p>
-      <p style="color: #666; font-size: 12px; margin-top: 30px;">Si no solicitaste este cambio, ignora este mensaje y tu contraseña permanecerá segura.</p>
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 560px; margin: 0 auto; background-color: #0B1220; color: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #C59427;">
+      <div style="background-color: #0B1220; padding: 24px; text-align: center; border-bottom: 2px solid #C59427;">
+        <h1 style="color: #C59427; margin: 0; font-size: 24px; letter-spacing: 2px;">AIMS</h1>
+        <p style="color: #94A3B8; margin: 4px 0 0; font-size: 12px;">SISTEMA DE GESTIÓN ACADÉMICA INTELIGENTE</p>
+      </div>
+      <div style="padding: 28px; background-color: #0F172A;">
+        <h2 style="color: #FFFFFF; margin-top: 0;">Recuperación de Contraseña</h2>
+        <p style="color: #CBD5E1; font-size: 15px; line-height: 1.5;">Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en AIMS. Haz clic en el botón a continuación:</p>
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${resetUrl}" style="background-color: #C59427; color: #0B1220; font-weight: bold; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-size: 15px;">Restablecer mi Contraseña</a>
+        </div>
+        <p style="color: #94A3B8; font-size: 13px; margin-top: 24px;">Si estás usando la app móvil o el botón anterior no funciona, copia este token de recuperación e ingrésalo en la pantalla de restablecer contraseña:</p>
+        <div style="background-color: #1E293B; border: 1px dashed #C59427; padding: 12px; border-radius: 6px; text-align: center; margin: 12px 0;">
+          <code style="color: #FCD34D; font-size: 15px; font-weight: bold; word-break: break-all;">${token}</code>
+        </div>
+        <p style="color: #F59E0B; font-size: 13px; margin-top: 14px;">⏳ Este token expira en 1 hora por seguridad.</p>
+        <p style="color: #64748B; font-size: 12px; margin-top: 24px;">Si tú no solicitaste este cambio, ignora este correo. Tu contraseña actual no cambiará.</p>
+      </div>
     </div>
   `;
 
   return sendEmail({
     to: email,
-    subject: 'Restablecimiento de Contraseña - AIMS API',
+    subject: 'Recuperación de Contraseña - AIMS',
     html,
-    text: `Restablece tu contraseña con este token (expira en 1h): ${token} o ingresando a: ${resetUrl}`,
+    text: `Restablece tu contraseña en AIMS con este token (expira en 1h): ${token} o ingresando a: ${resetUrl}`,
   });
 };
 

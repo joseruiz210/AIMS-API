@@ -31,7 +31,9 @@ const normalizeDocType = (val) => {
 class AuthService {
   async register(userData) {
     const email = userData.email.trim().toLowerCase();
-    const resolvedRole = userData.role || resolveRoleFromEmail(email);
+    const resolvedRole = ['INSTRUCTOR', 'APRENDIZ'].includes(userData.role)
+      ? userData.role
+      : resolveRoleFromEmail(email);
     if (!['INSTRUCTOR', 'APRENDIZ'].includes(resolvedRole)) {
       throw AppError.forbidden('Ese rol no puede registrarse públicamente');
     }
@@ -97,8 +99,8 @@ class AuthService {
     const { unhashedToken, hashedToken } = generateRandomToken();
     const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    // En desarrollo o cuando SMTP no está configurado, activar la cuenta directamente
-    const shouldAutoVerify = !env.smtp.user || !env.smtp.pass || env.nodeEnv !== 'production';
+    // Verificación de correo obligatoria para nuevos registros
+    const shouldAutoVerify = false;
 
     const rawDocType = (userData.documentType || '').trim().toUpperCase();
     const normDocType = normalizeDocType(userData.documentType);
@@ -115,9 +117,9 @@ class AuthService {
         documentNumber: cleanNum || preRegisteredUser.documentNumber,
         isPreRegistered: false,
         isActive: true,
-        isEmailVerified: true,
-        emailVerificationToken: null,
-        emailVerificationExpires: null,
+        isEmailVerified: false,
+        emailVerificationToken: hashedToken,
+        emailVerificationExpires,
       })
       : await userRepository.create({
         firstName: userData.firstName || userData.nombre,
@@ -130,9 +132,9 @@ class AuthService {
         documentNumber: cleanNum || null,
         isPreRegistered: false,
         isActive: true,
-        isEmailVerified: true,
-        emailVerificationToken: null,
-        emailVerificationExpires: null,
+        isEmailVerified: false,
+        emailVerificationToken: hashedToken,
+        emailVerificationExpires,
       });
 
     // Si hay una ficha y el usuario no está aún matriculado en ella, crear la matrícula
@@ -153,19 +155,15 @@ class AuthService {
       }
     }
 
-    if (!shouldAutoVerify) {
-      sendVerificationEmail(user.email, unhashedToken).catch((err) => {
-        console.error('Error al enviar correo de verificación:', err.message);
-      });
-    }
+    sendVerificationEmail(user.email, unhashedToken, userData.clientOrigin).catch((err) => {
+      console.error('Error al enviar correo de verificación:', err.message);
+    });
 
     const { password: _, emailVerificationToken: __, ...safeUser } = user;
 
     return {
       user: safeUser,
-      message: shouldAutoVerify
-        ? 'Usuario registrado y activado exitosamente.'
-        : 'Usuario registrado exitosamente. Se ha enviado un correo para verificar tu cuenta.',
+      message: 'Usuario registrado exitosamente. Te hemos enviado un correo para verificar y activar tu cuenta antes de iniciar sesión.',
     };
   }
 
@@ -237,12 +235,7 @@ class AuthService {
     }
 
     if (!user.isEmailVerified) {
-      if (!env.smtp.user || !env.smtp.pass || env.nodeEnv !== 'production') {
-        await userRepository.update(user.id, { isEmailVerified: true });
-        user.isEmailVerified = true;
-      } else {
-        throw AppError.forbidden('Debes verificar tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada.');
-      }
+      throw AppError.forbidden('Debes verificar tu correo electrónico antes de iniciar sesión. Por favor revisa tu bandeja de entrada o solicita un nuevo enlace de verificación.');
     }
 
     const accessToken = this._generateAccessToken(user);
@@ -271,7 +264,14 @@ class AuthService {
   }
 
   async resendVerificationEmail(email, clientOrigin) {
-    const user = await userRepository.findByEmail(email);
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    let user = await userRepository.findByEmail(cleanEmail);
+    if (!user) {
+      user = await prisma.user.findFirst({
+        where: { email: { equals: cleanEmail, mode: 'insensitive' } },
+      });
+    }
+
     if (!user) {
       return { message: 'Si el correo está registrado y no verificado, recibirás las instrucciones en tu bandeja de entrada.' };
     }
@@ -290,7 +290,14 @@ class AuthService {
   }
 
   async forgotPassword(email, clientOrigin) {
-    const user = await userRepository.findByEmail(email);
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    let user = await userRepository.findByEmail(cleanEmail);
+    if (!user) {
+      user = await prisma.user.findFirst({
+        where: { email: { equals: cleanEmail, mode: 'insensitive' } },
+      });
+    }
+
     if (!user) {
       return { message: 'Si el correo existe en nuestra plataforma, se enviará un enlace de recuperación.' };
     }
@@ -299,7 +306,10 @@ class AuthService {
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
     await authRepository.saveResetPasswordToken(user.id, hashedToken, expiresAt);
-    await sendPasswordResetEmail(user.email, unhashedToken, clientOrigin);
+    const mailResult = await sendPasswordResetEmail(user.email, unhashedToken, clientOrigin);
+    if (!mailResult.success) {
+      console.error(`[forgotPassword] Error enviando correo a ${user.email}:`, mailResult.error);
+    }
 
     return { message: 'Si el correo existe en nuestra plataforma, se enviará un enlace de recuperación.' };
   }

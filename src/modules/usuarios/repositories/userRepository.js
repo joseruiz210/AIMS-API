@@ -169,17 +169,22 @@ class UserRepository {
       },
     };
   }
-  async createGoogleUser({ firstName, lastName, email }) {
+  async createGoogleUser({ firstName, lastName, email, role, googleId }) {
     return executeWithRetry(() =>
       prisma.user.create({
         data: {
-          firstName,
-          lastName,
+          firstName: firstName || 'Usuario',
+          lastName: lastName || '',
           email,
+          role: role || 'APRENDIZ',
           password: null,
+          googleId: googleId || null,
           authProvider: 'GOOGLE',
-          isEmailVerified: true, // Google ya verificó el correo
+          isEmailVerified: true,
+          isActive: true,
+          isPreRegistered: false,
         },
+        select: this._defaultSelect(),
       })
     );
   }

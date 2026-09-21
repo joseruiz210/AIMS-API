@@ -31,7 +31,7 @@ if (env.smtp.user && env.smtp.pass) {
  * filtrando comodines como '*' o esquemas inválidos.
  */
 const _getCleanBaseUrl = (customBaseUrl) => {
-  let url = (customBaseUrl || env.frontendUrl || 'http://localhost:8081').trim();
+  let url = (customBaseUrl || env.frontendUrl || env.backendUrl || 'http://localhost:8081').trim();
 
   // Si proviene de un header referer o origin completo (ej: http://localhost:8081/login)
   try {
@@ -45,8 +45,9 @@ const _getCleanBaseUrl = (customBaseUrl) => {
 
   url = url.replace(/\/+$/, '');
 
-  if (url.includes('*') || !url.startsWith('http')) {
-    url = 'http://localhost:8081';
+  // Si en producción la URL apunta a localhost o contiene comodines, usar la URL del backend en Azure
+  if (url.includes('*') || !url.startsWith('http') || (env.nodeEnv === 'production' && url.includes('localhost'))) {
+    url = env.backendUrl || 'https://academicaimsapp-edh3c3g2eabtgqc2.westus-01.azurewebsites.net';
   }
   return url;
 };
@@ -88,6 +89,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
 const sendVerificationEmail = async (email, token, clientOrigin) => {
   const baseUrl = _getCleanBaseUrl(clientOrigin);
   const verificationUrl = `${baseUrl}/verify-email?token=${token}`;
+  const deepLinkUrl = `miproyecto://verify-email?token=${token}`;
   const html = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 560px; margin: 0 auto; background-color: #0B1220; color: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #C59427;">
       <div style="background-color: #0B1220; padding: 24px; text-align: center; border-bottom: 2px solid #C59427;">
@@ -98,11 +100,14 @@ const sendVerificationEmail = async (email, token, clientOrigin) => {
         <h2 style="color: #FFFFFF; margin-top: 0;">¡Bienvenido a AIMS!</h2>
         <p style="color: #CBD5E1; font-size: 15px; line-height: 1.5;">Por favor confirma tu correo electrónico para activar tu cuenta y poder iniciar sesión en la plataforma:</p>
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${verificationUrl}" style="background-color: #C59427; color: #0B1220; font-weight: bold; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-size: 15px;">Verificar mi Correo</a>
+          <a href="${verificationUrl}" style="background-color: #C59427; color: #0B1220; font-weight: bold; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-size: 15px; letter-spacing: 0.5px;">Verificar mi Correo</a>
         </div>
-        <p style="color: #94A3B8; font-size: 13px; margin-top: 24px;">Si estás usando la aplicación móvil o el enlace no abre, copia y pega este código de verificación en la app:</p>
-        <div style="background-color: #1E293B; border: 1px dashed #C59427; padding: 12px; border-radius: 6px; text-align: center; margin: 12px 0;">
-          <code style="color: #FCD34D; font-size: 16px; font-weight: bold; letter-spacing: 1px;">${token}</code>
+        <p style="color: #94A3B8; font-size: 13px; margin-top: 24px;">Si estás usando la aplicación móvil AIMS, puedes ingresar este código directamente en la pantalla de verificación:</p>
+        <div style="background-color: #1E293B; border: 1px dashed #C59427; padding: 14px; border-radius: 6px; text-align: center; margin: 12px 0;">
+          <code style="color: #FCD34D; font-size: 18px; font-weight: bold; letter-spacing: 2px;">${token}</code>
+        </div>
+        <div style="text-align: center; margin-top: 18px;">
+          <a href="${deepLinkUrl}" style="color: #94A3B8; font-size: 13px; text-decoration: underline;">Abrir directamente en la App Móvil</a>
         </div>
         <p style="color: #64748B; font-size: 12px; margin-top: 24px;">Si tú no solicitaste crear esta cuenta, puedes ignorar este mensaje de forma segura.</p>
       </div>
@@ -123,6 +128,7 @@ const sendVerificationEmail = async (email, token, clientOrigin) => {
 const sendPasswordResetEmail = async (email, token, clientOrigin) => {
   const baseUrl = _getCleanBaseUrl(clientOrigin);
   const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+  const deepLinkUrl = `miproyecto://reset-password?token=${token}`;
   const html = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 560px; margin: 0 auto; background-color: #0B1220; color: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #C59427;">
       <div style="background-color: #0B1220; padding: 24px; text-align: center; border-bottom: 2px solid #C59427;">
@@ -133,11 +139,14 @@ const sendPasswordResetEmail = async (email, token, clientOrigin) => {
         <h2 style="color: #FFFFFF; margin-top: 0;">Recuperación de Contraseña</h2>
         <p style="color: #CBD5E1; font-size: 15px; line-height: 1.5;">Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en AIMS. Haz clic en el botón a continuación:</p>
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${resetUrl}" style="background-color: #C59427; color: #0B1220; font-weight: bold; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-size: 15px;">Restablecer mi Contraseña</a>
+          <a href="${resetUrl}" style="background-color: #C59427; color: #0B1220; font-weight: bold; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-size: 15px; letter-spacing: 0.5px;">Restablecer mi Contraseña</a>
         </div>
-        <p style="color: #94A3B8; font-size: 13px; margin-top: 24px;">Si estás usando la app móvil o el botón anterior no funciona, copia este token de recuperación e ingrésalo en la pantalla de restablecer contraseña:</p>
+        <p style="color: #94A3B8; font-size: 13px; margin-top: 24px;">Si estás usando la app móvil, puedes ingresar este token de recuperación en la pantalla de restablecer contraseña:</p>
         <div style="background-color: #1E293B; border: 1px dashed #C59427; padding: 12px; border-radius: 6px; text-align: center; margin: 12px 0;">
           <code style="color: #FCD34D; font-size: 15px; font-weight: bold; word-break: break-all;">${token}</code>
+        </div>
+        <div style="text-align: center; margin-top: 18px;">
+          <a href="${deepLinkUrl}" style="color: #94A3B8; font-size: 13px; text-decoration: underline;">Abrir directamente en la App Móvil</a>
         </div>
         <p style="color: #F59E0B; font-size: 13px; margin-top: 14px;">⏳ Este token expira en 1 hora por seguridad.</p>
         <p style="color: #64748B; font-size: 12px; margin-top: 24px;">Si tú no solicitaste este cambio, ignora este correo. Tu contraseña actual no cambiará.</p>
@@ -159,14 +168,29 @@ const sendPasswordResetEmail = async (email, token, clientOrigin) => {
 const sendMagicLinkEmail = async (email, token, clientOrigin) => {
   const baseUrl = _getCleanBaseUrl(clientOrigin);
   const magicUrl = `${baseUrl}/magic-verify?token=${token}`;
+  const deepLinkUrl = `miproyecto://magic-verify?token=${token}`;
   const html = `
-    <div style="font-family: Arial, sans-serif; padding: 20px;">
-      <h2>Acceso Directo (Magic Link) - AIMS</h2>
-      <p>Haz clic en el siguiente botón para iniciar sesión automáticamente sin contraseña:</p>
-      <a href="${magicUrl}" style="background-color: #D4AF37; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Ingresar a AIMS</a>
-      <p style="margin-top: 20px;">O copia y pega este token en la aplicación:</p>
-      <code style="background-color: #f4f4f4; padding: 5px 10px; border-radius: 3px;">${token}</code>
-      <p style="color: #666; font-size: 12px; margin-top: 30px;">Si no solicitaste este acceso, puedes ignorar este correo.</p>
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 560px; margin: 0 auto; background-color: #0B1220; color: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #C59427;">
+      <div style="background-color: #0B1220; padding: 24px; text-align: center; border-bottom: 2px solid #C59427;">
+        <h1 style="color: #C59427; margin: 0; font-size: 24px; letter-spacing: 2px;">AIMS</h1>
+        <p style="color: #94A3B8; margin: 4px 0 0; font-size: 12px;">SISTEMA DE GESTIÓN ACADÉMICA INTELIGENTE</p>
+      </div>
+      <div style="padding: 28px; background-color: #0F172A;">
+        <h2 style="color: #FFFFFF; margin-top: 0;">Acceso Directo (Magic Link)</h2>
+        <p style="color: #CBD5E1; font-size: 15px; line-height: 1.5;">Haz clic en el siguiente botón para iniciar sesión automáticamente sin contraseña en tu cuenta de AIMS:</p>
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${magicUrl}" style="background-color: #C59427; color: #0B1220; font-weight: bold; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-size: 15px; letter-spacing: 0.5px;">Ingresar a AIMS</a>
+        </div>
+        <p style="color: #94A3B8; font-size: 13px; margin-top: 24px;">O copia y pega este código de acceso en la aplicación:</p>
+        <div style="background-color: #1E293B; border: 1px dashed #C59427; padding: 12px; border-radius: 6px; text-align: center; margin: 12px 0;">
+          <code style="color: #FCD34D; font-size: 15px; font-weight: bold; word-break: break-all;">${token}</code>
+        </div>
+        <div style="text-align: center; margin-top: 18px;">
+          <a href="${deepLinkUrl}" style="color: #94A3B8; font-size: 13px; text-decoration: underline;">Abrir directamente en la App Móvil</a>
+        </div>
+        <p style="color: #F59E0B; font-size: 13px; margin-top: 14px;">⏳ Este enlace expira en 15 minutos por seguridad.</p>
+        <p style="color: #64748B; font-size: 12px; margin-top: 24px;">Si no solicitaste este acceso, puedes ignorar este correo de forma segura.</p>
+      </div>
     </div>
   `;
 

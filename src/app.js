@@ -52,6 +52,22 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ─── Auth Action Redirects (Deep Linking & Email Links Bridge) ────────────────
+app.get('/verify-email', (req, res) => {
+  const token = req.query.token ? `?token=${encodeURIComponent(req.query.token)}` : '';
+  res.redirect(307, `/api/v1/auth/verify-email${token}`);
+});
+
+app.get('/reset-password', (req, res) => {
+  const token = req.query.token ? `?token=${encodeURIComponent(req.query.token)}` : '';
+  res.redirect(307, `/api/v1/auth/reset-password${token}`);
+});
+
+app.get(['/magic-verify', '/magic-link'], (req, res) => {
+  const token = req.query.token ? `?token=${encodeURIComponent(req.query.token)}` : '';
+  res.redirect(307, `/api/v1/auth/magic-link/verify${token}`);
+});
+
 // ─── API Routes ──────────────────────────────────────────────────────────────
 app.use('/api/v1', routes);
 

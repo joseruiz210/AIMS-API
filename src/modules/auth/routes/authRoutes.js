@@ -37,6 +37,7 @@ router.post('/forgot-password', authLimiter, validate({ body: emailOnlySchema })
 router.post('/validate-reset-token', authLimiter, validate({ body: verifyEmailSchema }), authController.validateResetToken);
 router.get('/validate-reset-token', authLimiter, authController.validateResetToken);
 router.post('/reset-password', authLimiter, validate({ body: resetPasswordSchema }), authController.resetPassword);
+router.get('/reset-password', authLimiter, authController.renderResetPasswordPage);
 router.post('/refresh-token', validate({ body: refreshTokenSchema }), authController.refreshToken);
 router.post('/logout', authController.logout);
 router.post('/change-password', authenticate, validate({ body: changePasswordSchema }), authController.changePassword);

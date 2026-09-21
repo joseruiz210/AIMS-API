@@ -9,10 +9,18 @@ const env = {
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || (process.env.JWT_SECRET + '_refresh'),
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   databaseUrl: process.env.DATABASE_URL,
+  backendUrl: (() => {
+    let raw = (process.env.BACKEND_URL || (process.env.NODE_ENV === 'production'
+      ? 'https://academicaimsapp-edh3c3g2eabtgqc2.westus-01.azurewebsites.net'
+      : `http://localhost:${process.env.PORT || 3000}`)).trim();
+    return raw.replace(/\/+$/, '');
+  })(),
   frontendUrl: (() => {
-    let raw = (process.env.FRONTEND_URL || 'http://localhost:8081').trim();
-    if (raw.includes('*') || !raw.startsWith('http')) {
-      raw = 'http://localhost:8081';
+    let raw = (process.env.FRONTEND_URL || '').trim();
+    if (!raw || raw.includes('*') || !raw.startsWith('http') || (process.env.NODE_ENV === 'production' && raw.includes('localhost'))) {
+      raw = process.env.NODE_ENV === 'production'
+        ? 'https://academicaimsapp-edh3c3g2eabtgqc2.westus-01.azurewebsites.net'
+        : 'http://localhost:8081';
     }
     return raw.replace(/\/+$/, '');
   })(),

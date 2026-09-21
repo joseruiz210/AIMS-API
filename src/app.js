@@ -11,6 +11,9 @@ const compression = require('compression');
 
 const app = express();
 
+// Confianza en proxies inversos (Azure App Service, Nginx, Cloudflare, etc.)
+app.set('trust proxy', 1);
+
 // â”€â”€â”€ Global Middlewares â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.use(compression());
 app.use(helmet({

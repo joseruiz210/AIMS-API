@@ -11,7 +11,7 @@ const compression = require('compression');
 
 const app = express();
 
-// Confiar en el proxy inverso de Azure (evita error de express-rate-limit con X-Forwarded-For)
+// Confianza en proxies inversos (Azure App Service, Nginx, Cloudflare, etc.)
 app.set('trust proxy', 1);
 
 // ─── Global Middlewares ───────────────────────────────────────────────────

@@ -486,16 +486,30 @@ class AuthService {
     let user = await userRepository.findByEmail(email);
 
     if (!user) {
-      throw AppError.unauthorized('Google OAuth solo está disponible para cuentas AIMS existentes');
-    }
-    if (!user.isActive) {
-      throw AppError.forbidden('La cuenta está desactivada. Contacta al administrador.');
-    }
-    if (!user.isEmailVerified) {
-      throw AppError.forbidden('La cuenta debe estar verificada para usar Google OAuth.');
-    }
-    if (!user.googleId) {
-      await userRepository.update(user.id, { googleId: payload.sub || null });
+      const resolvedRole = resolveRoleFromEmail(email);
+      const fullName = payload.name || '';
+      const nameParts = fullName.trim().split(/\s+/);
+      const firstName = payload.given_name || nameParts[0] || 'Usuario';
+      const lastName = payload.family_name || nameParts.slice(1).join(' ') || '';
+
+      user = await userRepository.createGoogleUser({
+        firstName,
+        lastName,
+        email,
+        role: resolvedRole || 'APRENDIZ',
+        googleId: payload.sub || null,
+      });
+    } else {
+      if (!user.isActive) {
+        throw AppError.forbidden('La cuenta está desactivada. Contacta al administrador.');
+      }
+      if (!user.isEmailVerified) {
+        await userRepository.update(user.id, { isEmailVerified: true });
+        user.isEmailVerified = true;
+      }
+      if (!user.googleId && payload.sub) {
+        await userRepository.update(user.id, { googleId: payload.sub });
+      }
     }
 
     const accessToken = this._generateAccessToken(user);

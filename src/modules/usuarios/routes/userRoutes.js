@@ -147,6 +147,13 @@ router.get(
   userController.getAll
 );
 
+router.post(
+  '/',
+  authenticate,
+  authorize('ADMIN', 'SUPERADMIN'),
+  userController.create
+);
+
 /**
  * @swagger
  * /users:

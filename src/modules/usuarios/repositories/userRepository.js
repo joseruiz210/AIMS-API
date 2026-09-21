@@ -149,12 +149,24 @@ class UserRepository {
       documentType: true,
       documentNumber: true,
       estadoAcademico: true,
-      especialidad: true,
       isActive: true,
       pushToken: true,
       createdAt: true,
       updatedAt: true,
-      password: false,
+      matriculas: {
+        take: 1,
+        select: {
+          ficha: {
+            select: {
+              id: true,
+              numero: true,
+              programa: {
+                select: { id: true, nombre: true, codigo: true },
+              },
+            },
+          },
+        },
+      },
     };
   }
   async createGoogleUser({ firstName, lastName, email }) {

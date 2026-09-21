@@ -30,13 +30,15 @@ class AuthController {
 
   resendVerification = catchAsync(async (req, res) => {
     const { email } = req.body;
-    const result = await authService.resendVerificationEmail(email);
+    const clientOrigin = req.get('origin') || req.get('referer');
+    const result = await authService.resendVerificationEmail(email, clientOrigin);
     return success(res, null, result.message);
   });
 
   forgotPassword = catchAsync(async (req, res) => {
     const { email } = req.body;
-    const result = await authService.forgotPassword(email);
+    const clientOrigin = req.get('origin') || req.get('referer');
+    const result = await authService.forgotPassword(email, clientOrigin);
     return success(res, null, result.message);
   });
 
@@ -87,7 +89,8 @@ class AuthController {
 
   sendMagicLink = catchAsync(async (req, res) => {
     const { email } = req.body;
-    const result = await authService.sendMagicLink(email);
+    const clientOrigin = req.get('origin') || req.get('referer');
+    const result = await authService.sendMagicLink(email, clientOrigin);
     return success(res, null, result.message);
   });
 

@@ -42,8 +42,8 @@ services:
       - "8081:8081"
     environment:
       - EXPO_PUBLIC_API_URL=http://localhost:3000/api/v1
-      - EXPO_PUBLIC_GOOGLE_CLIENT_ID=801203695881-vjkbm79n28utn02fkiei3tmrieqmkd37.apps.googleusercontent.com
-      - GOOGLE_CLIENT_ID=801203695881-vjkbm79n28utn02fkiei3tmrieqmkd37.apps.googleusercontent.com
+      - EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=801203695881-vjkbm79n28utn02fkiei3tmrieqmkd37.apps.googleusercontent.com
+      - EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=801203695881-gv5vvikcfpbjkpvthpqd1babkk512b4h.apps.googleusercontent.com
     volumes:
       - ./frontend/MiProyecto/MiProyecto:/app
       - /app/node_modules

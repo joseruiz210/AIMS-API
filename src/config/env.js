@@ -9,7 +9,13 @@ const env = {
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || (process.env.JWT_SECRET + '_refresh'),
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   databaseUrl: process.env.DATABASE_URL,
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+  frontendUrl: (() => {
+    let raw = (process.env.FRONTEND_URL || 'http://localhost:8081').trim();
+    if (raw.includes('*') || !raw.startsWith('http')) {
+      raw = 'http://localhost:8081';
+    }
+    return raw.replace(/\/+$/, '');
+  })(),
   googleClientId: process.env.GOOGLE_CLIENT_ID,
   smtp: {
     host: process.env.SMTP_HOST || 'smtp.ethereal.email',
@@ -21,7 +27,7 @@ const env = {
   },
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || '',
-    model: process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
+    model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
   },
 };
 

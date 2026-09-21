@@ -270,7 +270,7 @@ class AuthService {
     return { message: 'Correo electrónico verificado exitosamente.' };
   }
 
-  async resendVerificationEmail(email) {
+  async resendVerificationEmail(email, clientOrigin) {
     const user = await userRepository.findByEmail(email);
     if (!user) {
       return { message: 'Si el correo está registrado y no verificado, recibirás las instrucciones en tu bandeja de entrada.' };
@@ -284,12 +284,12 @@ class AuthService {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await authRepository.updateVerificationToken(user.id, hashedToken, expiresAt);
 
-    await sendVerificationEmail(user.email, unhashedToken);
+    await sendVerificationEmail(user.email, unhashedToken, clientOrigin);
 
     return { message: 'Si el correo está registrado y no verificado, recibirás las instrucciones en tu bandeja de entrada.' };
   }
 
-  async forgotPassword(email) {
+  async forgotPassword(email, clientOrigin) {
     const user = await userRepository.findByEmail(email);
     if (!user) {
       return { message: 'Si el correo existe en nuestra plataforma, se enviará un enlace de recuperación.' };
@@ -299,7 +299,7 @@ class AuthService {
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
     await authRepository.saveResetPasswordToken(user.id, hashedToken, expiresAt);
-    await sendPasswordResetEmail(user.email, unhashedToken);
+    await sendPasswordResetEmail(user.email, unhashedToken, clientOrigin);
 
     return { message: 'Si el correo existe en nuestra plataforma, se enviará un enlace de recuperación.' };
   }
@@ -391,7 +391,7 @@ class AuthService {
     return user;
   }
 
-  async sendMagicLink(email) {
+  async sendMagicLink(email, clientOrigin) {
     const user = await userRepository.findByEmail(email);
     if (!user) {
       return { message: 'Si el correo está registrado, recibirás un enlace de acceso.' };
@@ -408,7 +408,7 @@ class AuthService {
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
     await authRepository.saveMagicLinkToken(user.id, hashedToken, expiresAt);
-    await sendMagicLinkEmail(user.email, unhashedToken);
+    await sendMagicLinkEmail(user.email, unhashedToken, clientOrigin);
 
     return { message: 'Si el correo está registrado, recibirás un enlace de acceso.' };
   }

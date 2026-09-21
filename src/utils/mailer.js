@@ -16,6 +16,31 @@ if (env.smtp.user && env.smtp.pass) {
 }
 
 /**
+ * Sanitiza y obtiene una URL base válida (ej: http://localhost:8081 o https://dominio.com)
+ * filtrando comodines como '*' o esquemas inválidos.
+ */
+const _getCleanBaseUrl = (customBaseUrl) => {
+  let url = (customBaseUrl || env.frontendUrl || 'http://localhost:8081').trim();
+
+  // Si proviene de un header referer o origin completo (ej: http://localhost:8081/login)
+  try {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      const parsed = new URL(url);
+      if (parsed.hostname && !parsed.hostname.includes('*')) {
+        url = parsed.origin;
+      }
+    }
+  } catch (e) {}
+
+  url = url.replace(/\/+$/, '');
+
+  if (url.includes('*') || !url.startsWith('http')) {
+    url = 'http://localhost:8081';
+  }
+  return url;
+};
+
+/**
  * Sends an email using Nodemailer or logs it in development if SMTP is unconfigured.
  */
 const sendEmail = async ({ to, subject, html, text }) => {
@@ -49,8 +74,9 @@ const sendEmail = async ({ to, subject, html, text }) => {
 /**
  * Sends verification email to user
  */
-const sendVerificationEmail = async (email, token) => {
-  const verificationUrl = `${env.frontendUrl}/verify-email?token=${token}`;
+const sendVerificationEmail = async (email, token, clientOrigin) => {
+  const baseUrl = _getCleanBaseUrl(clientOrigin);
+  const verificationUrl = `${baseUrl}/verify-email?token=${token}`;
   const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px;">
       <h2>Bienvenido a AIMS API</h2>
@@ -73,8 +99,9 @@ const sendVerificationEmail = async (email, token) => {
 /**
  * Sends password reset email to user
  */
-const sendPasswordResetEmail = async (email, token) => {
-  const resetUrl = `${env.frontendUrl}/reset-password?token=${token}`;
+const sendPasswordResetEmail = async (email, token, clientOrigin) => {
+  const baseUrl = _getCleanBaseUrl(clientOrigin);
+  const resetUrl = `${baseUrl}/reset-password?token=${token}`;
   const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px;">
       <h2>Recuperación de Contraseña - AIMS API</h2>
@@ -98,8 +125,9 @@ const sendPasswordResetEmail = async (email, token) => {
 /**
  * Sends magic link email for passwordless login
  */
-const sendMagicLinkEmail = async (email, token) => {
-  const magicUrl = `${env.frontendUrl}/magic-verify?token=${token}`;
+const sendMagicLinkEmail = async (email, token, clientOrigin) => {
+  const baseUrl = _getCleanBaseUrl(clientOrigin);
+  const magicUrl = `${baseUrl}/magic-verify?token=${token}`;
   const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px;">
       <h2>Acceso Directo (Magic Link) - AIMS</h2>
@@ -136,4 +164,5 @@ module.exports = {
   sendVerificationEmail,
   sendPasswordResetEmail,
   sendMagicLinkEmail,
+  _getCleanBaseUrl,
 };

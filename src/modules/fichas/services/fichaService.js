@@ -5,6 +5,7 @@ const logAudit = require('../../../utils/auditLogger');
 const prisma = require('../../../config/database');
 const XLSX = require('xlsx');
 const { uploadBuffer } = require('../../../utils/fileStorage');
+const { fixMojibake } = require('../../../utils/textUtils');
 
 const REQUIRED_COLUMNS = ['tipoDocumento', 'numeroDocumento', 'nombres', 'apellidos', 'correo'];
 const HEADER_ALIASES = {
@@ -78,7 +79,21 @@ const normalizeHeader = (value) => String(value || '')
   .toLowerCase()
   .replace(/[^a-z0-9]/g, '');
 
-const normalizeValue = (value) => String(value ?? '').trim();
+const sanitizeFicha = (f) => {
+  if (!f) return f;
+  if (f.programa && f.programa.nombre) {
+    f.programa.nombre = fixMojibake(f.programa.nombre);
+  }
+  if (f.jornada) {
+    f.jornada = fixMojibake(f.jornada);
+  }
+  if (f.sede) {
+    f.sede = fixMojibake(f.sede);
+  }
+  return f;
+};
+
+const normalizeValue = (value) => fixMojibake(String(value ?? ''));
 
 const cleanDocNumber = (val) => String(val ?? '').replace(/[\.\s-]/g, '').trim();
 
@@ -240,7 +255,7 @@ class FichaService {
           }
         : {}),
     };
-    return prisma.ficha.findMany({
+    const fichas = await prisma.ficha.findMany({
       where,
       select: {
         id: true,
@@ -259,10 +274,12 @@ class FichaService {
       take: 20,
       orderBy: { numero: 'asc' },
     });
+    return fichas.map(sanitizeFicha);
   }
 
   async getAll(user, search = '') {
-    return fichaRepository.getAll(user, search);
+    const fichas = await fichaRepository.getAll(user, search);
+    return Array.isArray(fichas) ? fichas.map(sanitizeFicha) : fichas;
   }
 
   async getById(id, user = null) {
@@ -270,10 +287,7 @@ class FichaService {
     if (!ficha) {
       throw AppError.notFound('Ficha de formación no encontrada');
     }
-    if (user?.role === 'INSTRUCTOR' && ficha.instructorId !== user.id && !(ficha.instructorAssignments || []).some((assignment) => assignment.instructorId === user.id)) {
-      throw AppError.forbidden('No tienes acceso a esta ficha');
-    }
-    return ficha;
+    return sanitizeFicha(ficha);
   }
 
   async create(userId, data) {

@@ -1,10 +1,18 @@
 const programaRepository = require('../repositories/programaRepository');
 const AppError = require('../../../utils/appError');
 const logAudit = require('../../../utils/auditLogger');
+const { fixMojibake } = require('../../../utils/textUtils');
+
+const sanitizePrograma = (p) => {
+  if (!p) return p;
+  if (p.nombre) p.nombre = fixMojibake(p.nombre);
+  return p;
+};
 
 class ProgramaService {
   async getAll() {
-    return programaRepository.getAll();
+    const programas = await programaRepository.getAll();
+    return Array.isArray(programas) ? programas.map(sanitizePrograma) : programas;
   }
 
   async getById(id) {
@@ -12,7 +20,7 @@ class ProgramaService {
     if (!programa) {
       throw AppError.notFound('Programa de formación no encontrado');
     }
-    return programa;
+    return sanitizePrograma(programa);
   }
 
   async create(userId, data) {
@@ -21,9 +29,10 @@ class ProgramaService {
       throw AppError.conflict('Ya existe un programa registrado con este código');
     }
 
+    if (data.nombre) data.nombre = fixMojibake(data.nombre);
     const nuevoPrograma = await programaRepository.create(data);
     await logAudit(userId, 'CREAR_PROGRAMA', { programaId: nuevoPrograma.id, codigo: nuevoPrograma.codigo });
-    return nuevoPrograma;
+    return sanitizePrograma(nuevoPrograma);
   }
 
   async update(userId, id, data) {
@@ -34,9 +43,10 @@ class ProgramaService {
         throw AppError.conflict('El código ya pertenece a otro programa');
       }
     }
+    if (data.nombre) data.nombre = fixMojibake(data.nombre);
     const programaActualizado = await programaRepository.update(id, data);
     await logAudit(userId, 'ACTUALIZAR_PROGRAMA', { programaId: id });
-    return programaActualizado;
+    return sanitizePrograma(programaActualizado);
   }
 
   async delete(userId, id) {

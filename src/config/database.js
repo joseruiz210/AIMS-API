@@ -5,11 +5,20 @@ const { PrismaPg } = require('@prisma/adapter-pg');
 
 const connectionString = process.env.DATABASE_URL;
 
+const isProduction = process.env.NODE_ENV === 'production';
+const requiresSsl = Boolean(
+  isProduction ||
+  (connectionString && (connectionString.includes('sslmode=require') || connectionString.includes('neon.tech') || connectionString.includes('azure.com')))
+);
+
 const pool = new Pool({
   connectionString,
-  max: 20,
+  max: process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  connectionTimeoutMillis: 30000,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
+  ...(requiresSsl ? { ssl: { rejectUnauthorized: false } } : {}),
 });
 
 pool.on('error', (err) => {
@@ -28,3 +37,4 @@ const prisma = new PrismaClient({
 });
 
 module.exports = prisma;
+

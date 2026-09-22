@@ -1,30 +1,89 @@
 const nodemailer = require('nodemailer');
 const env = require('../config/env');
 
-let transporter = null;
+const recentLogs = [];
+const MAX_LOGS = 25;
 
-if (env.smtp.user && env.smtp.pass) {
-  const isGmail = env.smtp.host?.includes('gmail') || env.smtp.user?.includes('@gmail.com');
-  transporter = nodemailer.createTransport(
-    isGmail
-      ? {
-          service: 'gmail',
-          auth: {
-            user: env.smtp.user,
-            pass: env.smtp.pass,
-          },
-        }
-      : {
-          host: env.smtp.host,
-          port: env.smtp.port,
-          secure: env.smtp.port === 465,
-          auth: {
-            user: env.smtp.user,
-            pass: env.smtp.pass,
-          },
-        }
-  );
-}
+const recordLog = (entry) => {
+  recentLogs.unshift({
+    timestamp: new Date().toISOString(),
+    ...entry,
+  });
+  if (recentLogs.length > MAX_LOGS) {
+    recentLogs.pop();
+  }
+};
+
+const getRecentLogs = () => recentLogs;
+
+const createTransporter = (port) => {
+  if (!env.smtp.user || !env.smtp.pass) return null;
+  const numPort = Number(port) || 587;
+  const isSecure = numPort === 465;
+
+  return nodemailer.createTransport({
+    host: env.smtp.host || 'smtp.gmail.com',
+    port: numPort,
+    secure: isSecure, // false para 587 (STARTTLS), true para 465 (SSL)
+    auth: {
+      user: env.smtp.user,
+      pass: env.smtp.pass,
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
+    connectionTimeout: 12000,
+    greetingTimeout: 10000,
+    socketTimeout: 18000,
+  });
+};
+
+const defaultPort = parseInt(env.smtp.port, 10) || 587;
+const fallbackPort = defaultPort === 587 ? 465 : 587;
+
+let primaryTransporter = createTransporter(defaultPort);
+let fallbackTransporter = createTransporter(fallbackPort);
+
+/**
+ * Verifica la conectividad con el servidor SMTP probando el puerto primario y el de respaldo si es necesario.
+ */
+const verifyTransporter = async () => {
+  if (!primaryTransporter) {
+    return { success: false, error: 'SMTP no configurado (falta usuario o contraseña)' };
+  }
+  try {
+    await primaryTransporter.verify();
+    return { success: true, port: defaultPort };
+  } catch (primaryErr) {
+    console.warn(`[SMTP WARN] Verificación falló en puerto primario ${defaultPort}:`, primaryErr.message);
+    if (fallbackTransporter) {
+      try {
+        await fallbackTransporter.verify();
+        return { success: true, port: fallbackPort, note: `Puerto primario ${defaultPort} falló, fallback a ${fallbackPort} exitoso` };
+      } catch (fallbackErr) {
+        return {
+          success: false,
+          error: `Fallo en ambos puertos (${defaultPort}: ${primaryErr.message}; ${fallbackPort}: ${fallbackErr.message})`,
+        };
+      }
+    }
+    return { success: false, error: primaryErr.message };
+  }
+};
+
+const getSmtpConfig = () => {
+  const user = env.smtp.user || '';
+  const maskedUser = user ? `${user.substring(0, 3)}***@${user.split('@')[1] || 'gmail.com'}` : 'NO_CONFIGURADO';
+  return {
+    host: env.smtp.host || 'smtp.gmail.com',
+    defaultPort,
+    fallbackPort,
+    user: maskedUser,
+    hasPassword: Boolean(env.smtp.pass),
+    passLength: env.smtp.pass ? env.smtp.pass.length : 0,
+    from: env.smtp.from,
+  };
+};
 
 /**
  * Sanitiza y obtiene una URL base válida (ej: http://localhost:8081 o https://dominio.com)
@@ -53,15 +112,16 @@ const _getCleanBaseUrl = (customBaseUrl) => {
 };
 
 /**
- * Sends an email using Nodemailer or logs it in development if SMTP is unconfigured.
+ * Sends an email using Nodemailer with automatic fallback between ports.
  */
 const sendEmail = async ({ to, subject, html, text }) => {
-  if (!transporter) {
+  if (!primaryTransporter) {
     console.log('\n--- EMAIL SIMULATION (DEV MODE) ---');
     console.log(`To: ${to}`);
     console.log(`Subject: ${subject}`);
     console.log(`Content:\n${text || html}`);
     console.log('-------------------------------------\n');
+    recordLog({ to, subject, success: false, simulated: true });
     return { success: false, simulated: true };
   }
 
@@ -71,14 +131,36 @@ const sendEmail = async ({ to, subject, html, text }) => {
     subject,
     text,
     html,
+    headers: {
+      'X-Priority': '1',
+      'X-MSMail-Priority': 'High',
+      'Importance': 'High',
+    },
   };
 
+  // Intentar primero con el transportador primario (puerto 587 por defecto para Azure)
   try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`[EMAIL OK] Enviado a ${to} - messageId: ${info.messageId}`);
-    return { success: true, messageId: info.messageId };
+    const info = await primaryTransporter.sendMail(mailOptions);
+    console.log(`[EMAIL OK] Enviado a ${to} (puerto ${defaultPort}) - messageId: ${info.messageId}`);
+    recordLog({ to, subject, success: true, port: defaultPort, messageId: info.messageId });
+    return { success: true, messageId: info.messageId, port: defaultPort };
   } catch (error) {
-    console.error(`[EMAIL ERROR] No se pudo enviar a ${to}:`, error.message);
+    console.warn(`[EMAIL WARN] Falló en puerto ${defaultPort} hacia ${to}: ${error.message}. Intentando fallback en puerto ${fallbackPort}...`);
+
+    if (fallbackTransporter) {
+      try {
+        const fallbackInfo = await fallbackTransporter.sendMail(mailOptions);
+        console.log(`[EMAIL OK - FALLBACK] Enviado a ${to} (puerto ${fallbackPort}) - messageId: ${fallbackInfo.messageId}`);
+        recordLog({ to, subject, success: true, port: fallbackPort, messageId: fallbackInfo.messageId, note: 'Usó puerto de respaldo' });
+        return { success: true, messageId: fallbackInfo.messageId, port: fallbackPort };
+      } catch (fallbackError) {
+        console.error(`[EMAIL ERROR] Falló también en fallback (puerto ${fallbackPort}) hacia ${to}:`, fallbackError.message);
+        recordLog({ to, subject, success: false, error: `P${defaultPort}: ${error.message} | P${fallbackPort}: ${fallbackError.message}` });
+        return { success: false, error: `P${defaultPort}: ${error.message} | P${fallbackPort}: ${fallbackError.message}` };
+      }
+    }
+
+    recordLog({ to, subject, success: false, error: error.message });
     return { success: false, error: error.message };
   }
 };
@@ -202,13 +284,15 @@ const sendMagicLinkEmail = async (email, token, clientOrigin) => {
   });
 };
 
-if (transporter) {
-  transporter.verify((error) => {
-    if (error) {
-      console.error('[SMTP] Conexión fallida al arrancar:', error.message);
+if (primaryTransporter) {
+  verifyTransporter().then((res) => {
+    if (res.success) {
+      console.log(`[SMTP] Servidor de correo listo y verificado en puerto ${res.port} ✅`);
     } else {
-      console.log('[SMTP] Servidor de correo listo y verificado ✅');
+      console.error(`[SMTP] Conexión inicial fallida: ${res.error}`);
     }
+  }).catch((err) => {
+    console.error(`[SMTP] Error inesperado en verificación inicial: ${err.message}`);
   });
 } else {
   console.warn('[SMTP] No configurado — los correos se simularán en consola, no se enviarán de verdad.');
@@ -219,5 +303,8 @@ module.exports = {
   sendVerificationEmail,
   sendPasswordResetEmail,
   sendMagicLinkEmail,
+  verifyTransporter,
+  getRecentLogs,
+  getSmtpConfig,
   _getCleanBaseUrl,
 };

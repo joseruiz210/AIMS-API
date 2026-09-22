@@ -27,7 +27,7 @@ const env = {
   googleClientId: process.env.GOOGLE_CLIENT_ID,
   smtp: {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT, 10) || 465,
+    port: parseInt(process.env.SMTP_PORT, 10) || 587,
     user: process.env.SMTP_USER || 'aimscorreo15342@gmail.com',
     pass: process.env.SMTP_PASS || 'oufkndvaqnmibjgu',
     from: process.env.EMAIL_FROM || 'AIMS <aimscorreo15342@gmail.com>',

@@ -52,6 +52,47 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ─── SMTP Diagnostic Endpoint ──────────────────────────────────────────────
+app.get('/api/health/smtp-diagnostic', async (req, res) => {
+  try {
+    const { verifyTransporter, getSmtpConfig, getRecentLogs, sendEmail } = require('./utils/mailer');
+    const verifyResult = await verifyTransporter();
+    const config = getSmtpConfig();
+    const recentLogs = getRecentLogs();
+
+    let testSendResult = null;
+    const testTo = req.query.testTo;
+    if (testTo && typeof testTo === 'string' && testTo.includes('@')) {
+      testSendResult = await sendEmail({
+        to: testTo.trim(),
+        subject: 'Prueba de diagnóstico AIMS',
+        text: 'Este es un correo de prueba emitido desde el diagnóstico de AIMS.',
+        html: '<div style="font-family:sans-serif;padding:20px;background:#0B1220;color:#FFF;border-radius:8px;"><h3>AIMS Diagnóstico SMTP</h3><p>El envío de correos desde el servidor está funcionando correctamente.</p></div>',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      smtp: {
+        verified: verifyResult.success,
+        activePort: verifyResult.port || null,
+        error: verifyResult.error || null,
+        note: verifyResult.note || null,
+        config,
+      },
+      testSend: testSendResult,
+      recentDeliveryLogs: recentLogs,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
 // ─── Auth Action Redirects (Deep Linking & Email Links Bridge) ────────────────
 app.get('/verify-email', (req, res) => {
   const token = req.query.token ? `?token=${encodeURIComponent(req.query.token)}` : '';

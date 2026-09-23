@@ -9,8 +9,8 @@ class ProgramaRepository {
         },
         fichas: {
           select: {
-            _count: {
-              select: { matriculas: true },
+            matriculas: {
+              select: { aprendizId: true },
             },
             instructorAssignments: {
               select: { instructorId: true },
@@ -22,19 +22,25 @@ class ProgramaRepository {
     });
 
     return programas.map((p) => {
-      const aprendicesCount = p.fichas.reduce(
-        (acc, f) => acc + (f._count?.matriculas || 0),
-        0
-      );
+      // Deduplica aprendices por programa (usuarios aprendices únicos en el programa)
+      const aprendicesSet = new Set();
+      p.fichas.forEach((f) => {
+        f.matriculas?.forEach((m) => {
+          if (m.aprendizId) aprendicesSet.add(m.aprendizId);
+        });
+      });
+
       // Deduplica instructores (un instructor puede estar en varias fichas)
       const instructoresSet = new Set();
       p.fichas.forEach((f) => {
-        f.instructorAssignments.forEach((a) => instructoresSet.add(a.instructorId));
+        f.instructorAssignments?.forEach((a) => {
+          if (a.instructorId) instructoresSet.add(a.instructorId);
+        });
       });
 
       return {
         ...p,
-        aprendicesCount,
+        aprendicesCount: aprendicesSet.size,
         instructoresCount: instructoresSet.size,
       };
     });

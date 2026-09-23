@@ -8,13 +8,26 @@ class ComunicadoService {
 
     if (role === 'ADMIN') {
       // El admin publica avisos globales: nunca lleva fichaId.
-      return comunicadoRepository.create({
+      const nuevo = await comunicadoRepository.create({
         autorId,
         fichaId: null,
         titulo: data.titulo,
         mensaje: data.mensaje,
         destinatario: 'Todos los usuarios',
       });
+
+      try {
+        const pushNotificationService = require('../../notificaciones/services/pushNotificationService');
+        await pushNotificationService.notifyGlobal({
+          title: data.titulo,
+          body: data.mensaje,
+          tipo: 'COMUNICADO',
+        });
+      } catch (e) {
+        console.error('Error enviando notificaciones para comunicado admin:', e.message);
+      }
+
+      return nuevo;
     }
 
     if (role === 'INSTRUCTOR') {
@@ -30,13 +43,26 @@ class ComunicadoService {
         throw AppError.forbidden('Solo puedes publicar avisos en fichas que tienes asignadas');
       }
 
-      return comunicadoRepository.create({
+      const nuevo = await comunicadoRepository.create({
         autorId,
         fichaId: ficha.id,
         titulo: data.titulo,
         mensaje: data.mensaje,
         destinatario: `Ficha ${ficha.numero}`,
       });
+
+      try {
+        const pushNotificationService = require('../../notificaciones/services/pushNotificationService');
+        await pushNotificationService.notifyFicha(ficha.id, {
+          title: data.titulo,
+          body: data.mensaje,
+          tipo: 'COMUNICADO',
+        });
+      } catch (e) {
+        console.error('Error enviando notificaciones para comunicado ficha:', e.message);
+      }
+
+      return nuevo;
     }
 
     throw AppError.forbidden('No tienes permisos para publicar avisos');

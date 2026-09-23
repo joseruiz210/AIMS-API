@@ -2,13 +2,41 @@ const prisma = require('../../../config/database');
 
 class ProgramaRepository {
   async getAll() {
-    return prisma.programa.findMany({
+    const programas = await prisma.programa.findMany({
       include: {
         _count: {
-          select: { fichas: true, modulos: true },
+          select: { fichas: true, competencias: true },
+        },
+        fichas: {
+          select: {
+            _count: {
+              select: { matriculas: true },
+            },
+            instructorAssignments: {
+              select: { instructorId: true },
+            },
+          },
         },
       },
       orderBy: { nombre: 'asc' },
+    });
+
+    return programas.map((p) => {
+      const aprendicesCount = p.fichas.reduce(
+        (acc, f) => acc + (f._count?.matriculas || 0),
+        0
+      );
+      // Deduplica instructores (un instructor puede estar en varias fichas)
+      const instructoresSet = new Set();
+      p.fichas.forEach((f) => {
+        f.instructorAssignments.forEach((a) => instructoresSet.add(a.instructorId));
+      });
+
+      return {
+        ...p,
+        aprendicesCount,
+        instructoresCount: instructoresSet.size,
+      };
     });
   }
 

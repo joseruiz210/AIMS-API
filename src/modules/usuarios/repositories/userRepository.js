@@ -85,18 +85,20 @@ class UserRepository {
   }
 
   async findAll({ skip, take, where, orderBy }) {
-    const [users, total] = await prisma.$transaction([
-      prisma.user.findMany({
-        where,
-        skip,
-        take,
-        orderBy,
-        select: this._defaultSelect(),
-      }),
-      prisma.user.count({ where }),
-    ]);
+    return executeWithRetry(async () => {
+      const [users, total] = await Promise.all([
+        prisma.user.findMany({
+          where,
+          skip,
+          take,
+          orderBy,
+          select: this._defaultSelect(),
+        }),
+        prisma.user.count({ where }),
+      ]);
 
-    return { users, total };
+      return { users, total };
+    });
   }
 
   async update(id, data) {

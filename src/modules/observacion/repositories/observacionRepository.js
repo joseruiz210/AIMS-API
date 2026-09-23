@@ -32,7 +32,7 @@ class ObservacionRepository {
   }
 
   async findAll({ skip = 0, take = 10, where = {} }) {
-    const [observaciones, total] = await prisma.$transaction([
+    const [observaciones, total] = await Promise.all([
       prisma.observacion.findMany({
         where,
         skip,

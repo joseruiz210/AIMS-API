@@ -49,7 +49,7 @@ class MatriculaRepository {
   }
 
   async findAll({ skip = 0, take = 10, where = {}, orderBy = { createdAt: 'desc' } }) {
-    const [matriculas, total] = await prisma.$transaction([
+    const [matriculas, total] = await Promise.all([
       prisma.matricula.findMany({
         where,
         skip,
